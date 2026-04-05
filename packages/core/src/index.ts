@@ -38,3 +38,6 @@ export type { QueryResult, QueryOptions } from "./query.js";
 
 export { lintProject } from "./lint.js";
 export type { LintIssue, LintResult, LintSeverity } from "./lint.js";
+
+export { parseLogEntries } from "./log-parser.js";
+export type { ParsedLogEntry } from "./log-parser.js";

@@ -2,37 +2,7 @@ import { Command } from "commander";
 import chalk from "chalk";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { loadProject } from "@kb/core";
-
-interface LogEntry {
-  heading: string;
-  body: string;
-}
-
-function parseLogEntries(content: string): LogEntry[] {
-  const entries: LogEntry[] = [];
-  // Split on lines starting with "## " (level-2 headings)
-  const sections = content.split(/^(?=## )/m);
-
-  for (const section of sections) {
-    const trimmed = section.trim();
-    if (!trimmed) continue;
-    // Skip the top-level title (# Activity Log)
-    if (trimmed.startsWith("# ")) continue;
-    if (!trimmed.startsWith("## ")) continue;
-
-    const newlineIdx = trimmed.indexOf("\n");
-    if (newlineIdx === -1) {
-      entries.push({ heading: trimmed.slice(3).trim(), body: "" });
-    } else {
-      const heading = trimmed.slice(3, newlineIdx).trim();
-      const body = trimmed.slice(newlineIdx + 1).trim();
-      entries.push({ heading, body });
-    }
-  }
-
-  return entries;
-}
+import { loadProject, parseLogEntries, type ParsedLogEntry } from "@kb/core";
 
 export function makeLogCommand(): Command {
   const cmd = new Command("log");
