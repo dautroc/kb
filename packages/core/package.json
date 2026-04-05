@@ -1,0 +1,16 @@
+{
+  "name": "@kb/core",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@iarna/toml": "^2.2.5",
+    "gray-matter": "^4.0.3"
+  }
+}

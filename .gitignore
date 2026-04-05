@@ -1,0 +1,5 @@
+node_modules/
+dist/
+.kb/index.db
+*.tsbuildinfo
+.DS_Store
