@@ -18,3 +18,6 @@ export type { ParsedPage } from "./markdown.js";
 
 export { indexProject } from "./indexer.js";
 export type { IndexStats } from "./indexer.js";
+
+export { searchWiki } from "./search.js";
+export type { SearchResult, SearchOptions } from "./search.js";
