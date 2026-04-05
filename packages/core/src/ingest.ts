@@ -1,5 +1,5 @@
 import { readFile, writeFile, mkdir, appendFile } from "node:fs/promises";
-import { join, dirname } from "node:path";
+import { join, dirname, resolve } from "node:path";
 import type { Project } from "./project.js";
 import type { LlmAdapter } from "./llm.js";
 import type { IngestResult } from "./ingest-types.js";
@@ -30,6 +30,16 @@ Return ONLY a JSON object matching this exact schema (no markdown fences):
   "logEntry": "..."
 }`;
 
+function assertWithinRoot(absPath: string, root: string): void {
+  const resolvedPath = resolve(absPath);
+  const resolvedRoot = resolve(root) + "/";
+  if (!resolvedPath.startsWith(resolvedRoot)) {
+    throw new Error(
+      `Unsafe path rejected: "${absPath}" is outside project root`,
+    );
+  }
+}
+
 async function readFileSafe(filePath: string): Promise<string> {
   try {
     return await readFile(filePath, "utf8");
@@ -39,12 +49,16 @@ async function readFileSafe(filePath: string): Promise<string> {
 }
 
 function parseIngestResult(raw: string): IngestResult {
+  const cleaned = raw
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```\s*$/i, "")
+    .trim();
   let parsed: unknown;
   try {
-    parsed = JSON.parse(raw);
+    parsed = JSON.parse(cleaned);
   } catch (err) {
     throw new Error(
-      `Invalid LLM response: could not parse JSON. Raw response: ${raw.slice(0, 200)}`,
+      `Invalid LLM response: could not parse JSON. Raw response: ${cleaned.slice(0, 200)}`,
     );
   }
 
@@ -147,12 +161,14 @@ async function applyIngestResult(
 ): Promise<void> {
   // Write summary
   const summaryAbsPath = join(project.root, result.summary.path);
+  assertWithinRoot(summaryAbsPath, project.root);
   await mkdir(dirname(summaryAbsPath), { recursive: true });
   await writeFile(summaryAbsPath, result.summary.content, "utf8");
 
   // Write updated pages
   for (const update of result.updates) {
     const absPath = join(project.root, update.path);
+    assertWithinRoot(absPath, project.root);
     await mkdir(dirname(absPath), { recursive: true });
     await writeFile(absPath, update.content, "utf8");
   }
@@ -160,6 +176,7 @@ async function applyIngestResult(
   // Write new pages
   for (const newPage of result.newPages) {
     const absPath = join(project.root, newPage.path);
+    assertWithinRoot(absPath, project.root);
     await mkdir(dirname(absPath), { recursive: true });
     await writeFile(absPath, newPage.content, "utf8");
   }

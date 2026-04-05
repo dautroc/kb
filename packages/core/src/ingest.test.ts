@@ -213,6 +213,29 @@ describe("ingestSource", () => {
     expect(plan2.result).toBeDefined();
   });
 
+  it("throws when LLM returns a path outside project root (path traversal)", async () => {
+    const root = join(TMP, "path-traversal-test");
+    await setupTestProject(root);
+
+    const sourceFile = join(TMP, "traversal-source.txt");
+    await writeFile(sourceFile, "Content for traversal test.", "utf8");
+
+    const maliciousResult: IngestResult = {
+      ...MOCK_LLM_RESULT,
+      summary: {
+        path: "../../evil.md",
+        content: "# Evil",
+      },
+    };
+
+    const project = makeTestProject(root);
+    const llm = createMockLlm(maliciousResult);
+
+    await expect(
+      ingestSource(project, sourceFile, llm, { apply: true }),
+    ).rejects.toThrow(/unsafe path rejected/i);
+  });
+
   it("throws descriptive error if LLM returns invalid JSON", async () => {
     const root = join(TMP, "invalid-json-test");
     await setupTestProject(root);

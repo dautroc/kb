@@ -67,7 +67,27 @@ async function readPdf(filePath: string): Promise<string> {
   return data.text;
 }
 
+function isPrivateUrl(url: string): boolean {
+  try {
+    const { hostname } = new URL(url);
+    return (
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "::1" ||
+      hostname.startsWith("169.254.") || // link-local
+      hostname.startsWith("10.") ||
+      hostname.startsWith("192.168.") ||
+      /^172\.(1[6-9]|2\d|3[01])\./.test(hostname)
+    );
+  } catch {
+    return false;
+  }
+}
+
 async function fetchUrl(url: string): Promise<string> {
+  if (isPrivateUrl(url)) {
+    throw new Error(`Fetching private/localhost URLs is not allowed: ${url}`);
+  }
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(
