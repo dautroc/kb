@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { createRequire } from "module";
 import { Command } from "commander";
 import { makeInitCommand } from "./commands/init.js";
 import { makeStatusCommand } from "./commands/status.js";
@@ -11,12 +12,15 @@ import { makeLintCommand } from "./commands/lint.js";
 import { makeMcpCommand } from "./commands/mcp.js";
 import { makeAgentContextCommand } from "./commands/agent-context.js";
 
+const require = createRequire(import.meta.url);
+const { version } = require("../package.json") as { version: string };
+
 const program = new Command();
 
 program
   .name("kb")
   .description("LLM-maintained wiki for project knowledge management")
-  .version("0.1.0");
+  .version(version);
 
 program.addCommand(makeInitCommand());
 program.addCommand(makeStatusCommand());
