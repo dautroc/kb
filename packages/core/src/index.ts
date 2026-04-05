@@ -35,3 +35,6 @@ export type { IngestOptions, IngestPlan } from "./ingest.js";
 
 export { queryWiki } from "./query.js";
 export type { QueryResult, QueryOptions } from "./query.js";
+
+export { lintProject } from "./lint.js";
+export type { LintIssue, LintResult, LintSeverity } from "./lint.js";

@@ -7,6 +7,7 @@ import { makeSearchCommand } from "./commands/search.js";
 import { makeIngestCommand } from "./commands/ingest.js";
 import { makeQueryCommand } from "./commands/query.js";
 import { makeLogCommand } from "./commands/log-cmd.js";
+import { makeLintCommand } from "./commands/lint.js";
 
 const program = new Command();
 
@@ -22,5 +23,6 @@ program.addCommand(makeSearchCommand());
 program.addCommand(makeIngestCommand());
 program.addCommand(makeQueryCommand());
 program.addCommand(makeLogCommand());
+program.addCommand(makeLintCommand());
 
 program.parse(process.argv);
