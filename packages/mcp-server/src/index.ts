@@ -126,8 +126,7 @@ async function toolIngest(
 ): Promise<string> {
   const sourcePath = String(args.source_path ?? "");
 
-  const llmConfig = project.config.llm;
-  const llm = createLlmAdapter(llmConfig);
+  const llm = createLlmAdapter(project.config);
 
   const plan = await ingestSource(project, sourcePath, llm, { apply: false });
 
