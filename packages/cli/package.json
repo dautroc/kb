@@ -5,7 +5,11 @@
   "bin": {
     "kb": "dist/index.js"
   },
-  "main": "dist/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js"
+    }
+  },
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsup",
@@ -18,7 +22,7 @@
     "commander": "^12.1.0"
   },
   "devDependencies": {
-    "@types/node": "^25.5.2",
+    "@types/node": "^22.0.0",
     "tsup": "^8.3.0",
     "vitest": "^2.1.0"
   }
