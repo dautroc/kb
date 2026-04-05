@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "pnpm -r run build",
-    "test": "vitest run",
+    "test": "vitest run --workspace vitest.workspace.ts",
     "lint": "biome check .",
     "dev": "pnpm -r run dev"
   },
