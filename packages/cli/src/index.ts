@@ -2,6 +2,7 @@
 import { Command } from "commander";
 import { makeInitCommand } from "./commands/init.js";
 import { makeStatusCommand } from "./commands/status.js";
+import { makeIndexCommand } from "./commands/index-cmd.js";
 
 const program = new Command();
 
@@ -12,5 +13,6 @@ program
 
 program.addCommand(makeInitCommand());
 program.addCommand(makeStatusCommand());
+program.addCommand(makeIndexCommand());
 
 program.parse(process.argv);
