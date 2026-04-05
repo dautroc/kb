@@ -32,3 +32,6 @@ export type { IngestResult } from "./ingest-types.js";
 
 export { ingestSource } from "./ingest.js";
 export type { IngestOptions, IngestPlan } from "./ingest.js";
+
+export { queryWiki } from "./query.js";
+export type { QueryResult, QueryOptions } from "./query.js";
