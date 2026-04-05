@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { startMcpServer } from "@kb/mcp-server";
+import { startMcpServer } from "kb-mcp";
 
 export function makeMcpCommand(): Command {
   return new Command("mcp")

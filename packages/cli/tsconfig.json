@@ -2,7 +2,11 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "src"
+    "rootDir": "src",
+    "paths": {
+      "kb-core": ["../core/dist/index.d.ts"],
+      "kb-mcp": ["../mcp-server/dist/index.d.ts"]
+    }
   },
   "include": ["src"]
 }

@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import chalk from "chalk";
-import { loadProject, indexProject } from "@kb/core";
+import { loadProject, indexProject } from "kb-core";
 
 export function makeIndexCommand(): Command {
   const cmd = new Command("index");

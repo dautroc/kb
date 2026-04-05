@@ -2,8 +2,8 @@ import { Command } from "commander";
 import chalk from "chalk";
 import { readdir, stat } from "node:fs/promises";
 import { join, basename } from "node:path";
-import { loadProject, ingestSource, createLlmAdapter } from "@kb/core";
-import type { IngestPlan } from "@kb/core";
+import { loadProject, ingestSource, createLlmAdapter } from "kb-core";
+import type { IngestPlan } from "kb-core";
 
 function printPlan(plan: IngestPlan, sourcePath: string): void {
   const sourceBase = basename(sourcePath);

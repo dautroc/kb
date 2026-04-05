@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import chalk from "chalk";
-import { loadProject, lintProject } from "@kb/core";
+import { loadProject, lintProject } from "kb-core";
 
 export function makeLintCommand(): Command {
   const cmd = new Command("lint");

@@ -1,6 +1,6 @@
 {
-  "name": "@kb/cli",
-  "version": "0.1.0",
+  "name": "kb-tool",
+  "version": "0.1.6",
   "type": "module",
   "bin": {
     "kb": "dist/index.js"
@@ -10,15 +10,17 @@
       "import": "./dist/index.js"
     }
   },
-  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "build": "tsup",
-    "dev": "tsup --watch",
+    "build": "tsc --project tsconfig.json",
+    "dev": "tsc --project tsconfig.json --watch",
     "test": "vitest run"
   },
   "dependencies": {
-    "@kb/core": "workspace:*",
-    "@kb/mcp-server": "workspace:*",
+    "kb-core": "0.1.2",
+    "kb-mcp": "0.1.1",
     "chalk": "^5.3.0",
     "commander": "^12.1.0"
   },

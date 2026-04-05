@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import chalk from "chalk";
-import { loadProject, queryWiki, createLlmAdapter } from "@kb/core";
+import { loadProject, queryWiki, createLlmAdapter } from "kb-core";
 
 export function makeQueryCommand(): Command {
   const cmd = new Command("query");

@@ -8,8 +8,8 @@ import {
   openDb,
   closeDb,
   searchWiki,
-} from "@kb/core";
-import type { SearchResult } from "@kb/core";
+} from "kb-core";
+import type { SearchResult } from "kb-core";
 
 export function makeSearchCommand(): Command {
   const cmd = new Command("search");

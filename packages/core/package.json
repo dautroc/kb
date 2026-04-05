@@ -1,9 +1,12 @@
 {
-  "name": "@kb/core",
-  "version": "0.1.0",
+  "name": "kb-core",
+  "version": "0.1.2",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup && tsc --declaration --emitDeclarationOnly --outDir dist --project tsconfig.json",
     "dev": "tsup --watch",
@@ -13,10 +16,8 @@
     "@anthropic-ai/sdk": "^0.30.0",
     "@iarna/toml": "^2.2.5",
     "@types/better-sqlite3": "^7.6.0",
-    "@types/pdf-parse": "^1.1.4",
     "better-sqlite3": "^9.0.0",
     "gray-matter": "^4.0.3",
-    "pdf-parse": "^1.1.4",
     "remark": "^15.0.0",
     "remark-frontmatter": "^5.0.0",
     "remark-wiki-link": "^2.0.0"

@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import { basename, resolve } from "node:path";
 import chalk from "chalk";
-import { initProject } from "@kb/core";
+import { initProject } from "kb-core";
 
 export function makeInitCommand(): Command {
   const cmd = new Command("init");

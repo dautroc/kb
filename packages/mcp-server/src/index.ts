@@ -14,8 +14,8 @@ import {
   ingestSource,
   lintProject,
   createLlmAdapter,
-} from "@kb/core";
-import type { Project } from "@kb/core";
+} from "kb-core";
+import type { Project } from "kb-core";
 
 // ---------------------------------------------------------------------------
 // Path safety helper
