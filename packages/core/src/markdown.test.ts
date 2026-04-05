@@ -116,7 +116,7 @@ one two three four five
       "utf8",
     );
     const page = await parsePage(filePath, "wiki/words.md");
-    expect(page.wordCount).toBeGreaterThan(0);
+    expect(page.wordCount).toBe(5);
   });
 
   it("stores full frontmatter in frontmatter field", async () => {

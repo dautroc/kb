@@ -86,7 +86,6 @@ export async function indexProject(
 
     const processFile = db.transaction(
       (
-        relPath: string,
         page: Awaited<ReturnType<typeof parsePage>>,
         hash: string,
         mtime: number,
@@ -134,7 +133,7 @@ export async function indexProject(
       }
 
       try {
-        processFile(relPath, page, hash, fileStat.mtimeMs);
+        processFile(page, hash, fileStat.mtimeMs);
         stats.indexed++;
       } catch {
         stats.errors++;
@@ -147,16 +146,17 @@ export async function indexProject(
       .all()
       .map((r) => r.path);
 
-    const deletePageStmt = db.prepare("DELETE FROM pages WHERE path = ?");
-    const deleteMetaStmt = db.prepare("DELETE FROM page_meta WHERE path = ?");
+    const stalePaths = allMetaPaths.filter((p) => !onDiskPaths.has(p));
 
-    for (const p of allMetaPaths) {
-      if (!onDiskPaths.has(p)) {
-        deletePageStmt.run(p);
-        deleteMetaStmt.run(p);
-        stats.deleted++;
+    const deleteStale = db.transaction((paths: string[]) => {
+      for (const p of paths) {
+        db.prepare("DELETE FROM pages WHERE path = ?").run(p);
+        db.prepare("DELETE FROM page_meta WHERE path = ?").run(p);
       }
-    }
+    });
+
+    deleteStale(stalePaths);
+    stats.deleted += stalePaths.length;
 
     return stats;
   } finally {
