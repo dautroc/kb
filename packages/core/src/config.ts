@@ -11,7 +11,7 @@ export interface KbConfig {
     wiki: string;
   };
   llm: {
-    provider: "anthropic" | "openai" | "ollama";
+    provider: "anthropic" | "openai" | "ollama" | "zai";
     model: string;
   };
   dependencies: Record<
@@ -20,7 +20,7 @@ export interface KbConfig {
   >;
 }
 
-const VALID_PROVIDERS = ["anthropic", "openai", "ollama"] as const;
+const VALID_PROVIDERS = ["anthropic", "openai", "ollama", "zai"] as const;
 
 function requireSafeRelativePath(val: string, field: string): void {
   if (val.startsWith("/") || val.split("/").includes("..")) {
