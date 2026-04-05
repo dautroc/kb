@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdtemp, rm, readFile, access } from "node:fs/promises";
+import { mkdtemp, rm, readFile, access, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { initProject } from "./init.js";
@@ -88,6 +88,18 @@ describe("initProject", () => {
     await expect(
       initProject({ name: "my-project", directory: tmpDir }),
     ).rejects.toThrow("already initialized");
+  });
+
+  it("cleans up .kb/ on initialization failure", async () => {
+    // Create a file named "wiki" to cause mkdir to fail
+    await writeFile(join(tmpDir, "wiki"), "blocking file");
+
+    await expect(
+      initProject({ name: "test", directory: tmpDir }),
+    ).rejects.toThrow();
+
+    // .kb/ should be removed on failure
+    await expect(access(join(tmpDir, ".kb"))).rejects.toThrow();
   });
 
   it("uses directory basename as project name when name is empty string", async () => {

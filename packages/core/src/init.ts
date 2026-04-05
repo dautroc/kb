@@ -1,4 +1,4 @@
-import { mkdir, writeFile, access } from "node:fs/promises";
+import { mkdir, writeFile, access, rm } from "node:fs/promises";
 import { join, basename } from "node:path";
 import TOML from "@iarna/toml";
 
@@ -271,27 +271,35 @@ export async function initProject(options: InitOptions): Promise<void> {
 
   const isoDate = new Date().toISOString().split("T")[0]!;
 
-  // Create directory structure
-  await mkdir(join(directory, ".kb"), { recursive: true });
-  await mkdir(join(directory, "sources"), { recursive: true });
-  await mkdir(join(directory, "wiki"), { recursive: true });
+  try {
+    await Promise.all([
+      mkdir(join(directory, ".kb"), { recursive: true }),
+      mkdir(join(directory, "sources"), { recursive: true }),
+      mkdir(join(directory, "wiki"), { recursive: true }),
+    ]);
 
-  // Write files
-  await writeFile(
-    join(directory, ".kb", "config.toml"),
-    buildConfigToml(projectName),
-    "utf8",
-  );
-  await writeFile(join(directory, ".kb", "schema.md"), buildSchemaMd(), "utf8");
-  await writeFile(join(directory, "sources", ".gitkeep"), "", "utf8");
-  await writeFile(
-    join(directory, "wiki", "_index.md"),
-    buildIndexMd(projectName, isoDate),
-    "utf8",
-  );
-  await writeFile(
-    join(directory, "log.md"),
-    buildLogMd(projectName, isoDate),
-    "utf8",
-  );
+    await Promise.all([
+      writeFile(
+        join(directory, ".kb", "config.toml"),
+        buildConfigToml(projectName),
+        "utf8",
+      ),
+      writeFile(join(directory, ".kb", "schema.md"), buildSchemaMd(), "utf8"),
+      writeFile(join(directory, "sources", ".gitkeep"), "", "utf8"),
+      writeFile(
+        join(directory, "wiki", "_index.md"),
+        buildIndexMd(projectName, isoDate),
+        "utf8",
+      ),
+      writeFile(
+        join(directory, "log.md"),
+        buildLogMd(projectName, isoDate),
+        "utf8",
+      ),
+    ]);
+  } catch (error) {
+    // Rollback: remove .kb/ if it was created
+    await rm(join(directory, ".kb"), { recursive: true, force: true });
+    throw error;
+  }
 }
