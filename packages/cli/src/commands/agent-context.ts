@@ -4,7 +4,7 @@ import { Command } from "commander";
 import chalk from "chalk";
 import { loadProject } from "@kb/core";
 
-async function readSchemaLines(schemaPath: string): Promise<string> {
+export async function readSchemaLines(schemaPath: string): Promise<string> {
   let content: string;
   try {
     content = await readFile(schemaPath, "utf8");
@@ -15,7 +15,7 @@ async function readSchemaLines(schemaPath: string): Promise<string> {
   return lines.join("\n");
 }
 
-async function buildBlock(
+export async function buildBlock(
   projectName: string,
   schemaLines: string,
 ): Promise<string> {
