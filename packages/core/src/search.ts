@@ -54,32 +54,35 @@ export function searchWiki(
   const limit = options?.limit ?? 10;
   const ftsQuery = sanitizeFtsQuery(query.trim());
 
-  const stmt = db.prepare<[string, string, number], FtsRow>(`
+  // Build dynamic tag WHERE clauses so filtering happens in SQL
+  const filterTags = options?.tags?.length
+    ? options.tags
+        .map((t) => t.trim().toLowerCase())
+        .filter((t) => t.length > 0)
+    : [];
+
+  const tagClauses = filterTags.map(() => "AND lower(tags) LIKE ?").join(" ");
+  const tagParams = filterTags.map((t) => `%${t}%`);
+
+  const stmt = db.prepare<[string, string, ...string[], number], FtsRow>(`
     SELECT path, title, tags, bm25(pages) as rank,
            snippet(pages, 2, '', '', '...', 8) as snippet
     FROM pages
     WHERE pages MATCH ? AND project = ?
+    ${tagClauses}
     ORDER BY rank
     LIMIT ?
   `);
 
-  const rows = stmt.all(ftsQuery, projectName, limit);
+  const rows = stmt.all(ftsQuery, projectName, ...tagParams, limit);
 
-  let results: SearchResult[] = rows.map((row) => ({
+  const results: SearchResult[] = rows.map((row) => ({
     rank: row.rank,
     path: row.path,
     title: row.title,
     snippet: row.snippet,
     tags: parseTags(row.tags),
   }));
-
-  if (options?.tags && options.tags.length > 0) {
-    const filterTags = options.tags.map((t) => t.trim().toLowerCase());
-    results = results.filter((r) => {
-      const resultTags = r.tags.map((t) => t.toLowerCase());
-      return filterTags.every((ft) => resultTags.includes(ft));
-    });
-  }
 
   return results;
 }

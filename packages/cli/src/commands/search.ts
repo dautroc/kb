@@ -55,6 +55,12 @@ export function makeSearchCommand(): Command {
           }
 
           const limit = parseInt(options.limit, 10);
+          if (isNaN(limit) || limit < 1) {
+            console.error(
+              chalk.red("Error: --limit must be a positive integer"),
+            );
+            process.exit(1);
+          }
           const tags = options.tags
             ? options.tags
                 .split(",")
