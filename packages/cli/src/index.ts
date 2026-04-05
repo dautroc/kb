@@ -9,6 +9,7 @@ import { makeQueryCommand } from "./commands/query.js";
 import { makeLogCommand } from "./commands/log-cmd.js";
 import { makeLintCommand } from "./commands/lint.js";
 import { makeMcpCommand } from "./commands/mcp.js";
+import { makeAgentContextCommand } from "./commands/agent-context.js";
 
 const program = new Command();
 
@@ -26,5 +27,6 @@ program.addCommand(makeQueryCommand());
 program.addCommand(makeLogCommand());
 program.addCommand(makeLintCommand());
 program.addCommand(makeMcpCommand());
+program.addCommand(makeAgentContextCommand());
 
 program.parse(process.argv);
