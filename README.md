@@ -1,4 +1,4 @@
-# kb
+# kb (knowledge base)
 
 A CLI tool that implements [Karpathy's LLM Wiki pattern](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) for project knowledge management. Each project gets an isolated, LLM-maintained wiki. The LLM summarizes, cross-references, and maintains — the human curates sources and asks questions.
 
@@ -81,7 +81,7 @@ sources = "sources"
 wiki = "wiki"
 
 [llm]
-provider = "anthropic"          # anthropic | openai | ollama
+provider = "anthropic"          # anthropic | openai | ollama | zai
 model = "claude-sonnet-4-20250514"
 
 [dependencies]
@@ -94,6 +94,21 @@ model = "claude-sonnet-4-20250514"
 | ------------------- | ------------------------ |
 | `ANTHROPIC_API_KEY` | `provider = "anthropic"` |
 | `OPENAI_API_KEY`    | `provider = "openai"`    |
+| `ZAI_API_KEY`       | `provider = "zai"`       |
+
+**Z.AI provider example:**
+
+```toml
+[llm]
+provider = "zai"
+model = "glm-4-flash"   # or any model available on z.ai
+```
+
+```bash
+export ZAI_API_KEY="your-zai-api-key"
+```
+
+Z.AI uses an OpenAI-compatible chat completions API (`https://api.z.ai/api/paas/v4/chat/completions`).
 
 ## Ingest
 
@@ -151,15 +166,65 @@ kb lint
 
 ## MCP Integration
 
-Start the MCP server and connect it to Claude Code or any MCP-compatible agent:
+`kb` ships a built-in MCP server that exposes all wiki operations to any MCP-compatible agent (Claude Code, Claude Desktop, Cursor, etc.).
+
+### Available tools
+
+| Tool              | Description                                       |
+| ----------------- | ------------------------------------------------- |
+| `kb_search`       | BM25 full-text search across wiki pages           |
+| `kb_get_page`     | Read the full content of a wiki page              |
+| `kb_get_index`    | Read `wiki/_index.md`                             |
+| `kb_list_sources` | List source files with size and modification time |
+| `kb_ingest`       | Dry-run ingest of a source file (shows plan)      |
+| `kb_lint`         | Run health checks on the wiki                     |
+| `kb_backlinks`    | Find all pages that link to a given page          |
+| `kb_status`       | Project overview — page count, source count, etc. |
+
+### Add to Claude Code (session)
 
 ```bash
-kb mcp
+claude mcp add kb -- npx kb-tool mcp
 ```
 
-Available MCP tools: `kb_search`, `kb_get_page`, `kb_get_index`, `kb_list_sources`, `kb_ingest`, `kb_lint`, `kb_backlinks`, `kb_status`.
+Or, if installed globally:
 
-Generate a CLAUDE.md block for automatic agent integration:
+```bash
+claude mcp add kb -- kb mcp
+```
+
+The server must be started from the directory that contains your `.kb/config.toml`. If your knowledge base lives in a subdirectory, pass the path:
+
+```bash
+claude mcp add kb -- sh -c "cd /path/to/kb-project && kb mcp"
+```
+
+### Add to Claude Desktop (`claude_desktop_config.json`)
+
+```json
+{
+  "mcpServers": {
+    "kb": {
+      "command": "kb",
+      "args": ["mcp"],
+      "cwd": "/path/to/your/kb-project",
+      "env": {
+        "ANTHROPIC_API_KEY": "your-key-here"
+      }
+    }
+  }
+}
+```
+
+If you use Z.AI as the provider, replace the env entry:
+
+```json
+"env": {
+  "ZAI_API_KEY": "your-zai-key-here"
+}
+```
+
+### Generate a CLAUDE.md integration block
 
 ```bash
 kb agent-context --write   # appends to CLAUDE.md in project root
