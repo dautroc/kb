@@ -7,7 +7,7 @@ import { loadProject } from "@kb/core";
 async function countWikiPages(wikiDir: string): Promise<number> {
   let entries: string[];
   try {
-    entries = await readdir(wikiDir);
+    entries = await readdir(wikiDir, { recursive: true });
   } catch {
     return 0;
   }
@@ -17,7 +17,7 @@ async function countWikiPages(wikiDir: string): Promise<number> {
 async function countSources(sourcesDir: string): Promise<number> {
   let entries: string[];
   try {
-    entries = await readdir(sourcesDir);
+    entries = await readdir(sourcesDir, { recursive: true });
   } catch {
     return 0;
   }
