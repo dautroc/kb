@@ -14,13 +14,18 @@ export interface IndexStats {
 }
 
 async function collectMdFiles(dir: string): Promise<string[]> {
-  let entries: string[];
   try {
-    entries = await readdir(dir, { recursive: true });
-  } catch {
+    const entries = await readdir(dir, {
+      recursive: true,
+      withFileTypes: true,
+    });
+    return entries
+      .filter((e) => e.isFile() && e.name.endsWith(".md"))
+      .map((e) => join((e as any).parentPath ?? e.path, e.name));
+  } catch (err: unknown) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
     return [];
   }
-  return entries.filter((f) => f.endsWith(".md")).map((f) => join(dir, f));
 }
 
 function sha256(content: string): string {
@@ -31,32 +36,28 @@ interface PageMetaRow {
   sha256: string;
 }
 
+interface UpsertStmts {
+  deletePages: Database.Statement;
+  insertPage: Database.Statement;
+  upsertMeta: Database.Statement;
+}
+
 function upsertParsedPage(
-  db: Database.Database,
+  stmts: UpsertStmts,
   project: Project,
   page: Awaited<ReturnType<typeof parsePage>>,
   hash: string,
   mtime: number,
 ): void {
-  const deleteStmt = db.prepare("DELETE FROM pages WHERE path = ?");
-  const insertStmt = db.prepare(
-    "INSERT INTO pages(path, title, content, tags, project) VALUES (?, ?, ?, ?, ?)",
+  stmts.deletePages.run(page.path);
+  stmts.insertPage.run(
+    page.path,
+    page.title,
+    page.content,
+    page.tags,
+    project.name,
   );
-  const upsertMeta = db.prepare(`
-    INSERT INTO page_meta(path, sha256, mtime, word_count, frontmatter, outgoing_links, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT(path) DO UPDATE SET
-      sha256 = excluded.sha256,
-      mtime = excluded.mtime,
-      word_count = excluded.word_count,
-      frontmatter = excluded.frontmatter,
-      outgoing_links = excluded.outgoing_links,
-      updated_at = excluded.updated_at
-  `);
-
-  deleteStmt.run(page.path);
-  insertStmt.run(page.path, page.title, page.content, page.tags, project.name);
-  upsertMeta.run(
+  stmts.upsertMeta.run(
     page.path,
     hash,
     mtime,
@@ -84,13 +85,37 @@ export async function indexProject(
       "SELECT sha256 FROM page_meta WHERE path = ?",
     );
 
+    const upsertStmts: UpsertStmts = {
+      deletePages: db.prepare("DELETE FROM pages WHERE path = ?"),
+      insertPage: db.prepare(
+        "INSERT INTO pages(path, title, content, tags, project) VALUES (?, ?, ?, ?, ?)",
+      ),
+      upsertMeta: db.prepare(`
+        INSERT INTO page_meta(path, sha256, mtime, word_count, frontmatter, outgoing_links, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(path) DO UPDATE SET
+          sha256 = excluded.sha256,
+          mtime = excluded.mtime,
+          word_count = excluded.word_count,
+          frontmatter = excluded.frontmatter,
+          outgoing_links = excluded.outgoing_links,
+          updated_at = excluded.updated_at
+      `),
+    };
+
+    const deleteStalePages = db.prepare("DELETE FROM pages WHERE path = ?");
+    const deleteStaleMeta = db.prepare("DELETE FROM page_meta WHERE path = ?");
+    const listMetaStmt = db.prepare<[], { path: string }>(
+      "SELECT path FROM page_meta",
+    );
+
     const processFile = db.transaction(
       (
         page: Awaited<ReturnType<typeof parsePage>>,
         hash: string,
         mtime: number,
       ) => {
-        upsertParsedPage(db, project, page, hash, mtime);
+        upsertParsedPage(upsertStmts, project, page, hash, mtime);
       },
     );
 
@@ -126,14 +151,14 @@ export async function indexProject(
 
       let page: Awaited<ReturnType<typeof parsePage>>;
       try {
-        page = await parsePage(absPath, relPath);
+        page = await parsePage(absPath, relPath, raw);
       } catch {
         stats.errors++;
         continue;
       }
 
       try {
-        processFile(page, hash, fileStat.mtimeMs);
+        processFile(page, hash, Math.floor(fileStat.mtimeMs));
         stats.indexed++;
       } catch {
         stats.errors++;
@@ -141,17 +166,14 @@ export async function indexProject(
     }
 
     // Remove entries for deleted files
-    const allMetaPaths = db
-      .prepare<[], { path: string }>("SELECT path FROM page_meta")
-      .all()
-      .map((r) => r.path);
+    const allMetaPaths = listMetaStmt.all().map((r) => r.path);
 
     const stalePaths = allMetaPaths.filter((p) => !onDiskPaths.has(p));
 
     const deleteStale = db.transaction((paths: string[]) => {
       for (const p of paths) {
-        db.prepare("DELETE FROM pages WHERE path = ?").run(p);
-        db.prepare("DELETE FROM page_meta WHERE path = ?").run(p);
+        deleteStalePages.run(p);
+        deleteStaleMeta.run(p);
       }
     });
 

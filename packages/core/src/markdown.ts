@@ -34,9 +34,7 @@ function extractTitle(
 function extractTags(fm: Record<string, unknown>): string {
   const tags = fm["tags"];
   if (!Array.isArray(tags)) return "";
-  return tags
-    .filter((t): t is string => typeof t === "string")
-    .join(",");
+  return tags.filter((t): t is string => typeof t === "string").join(",");
 }
 
 function extractWikiLinks(content: string): string[] {
@@ -58,8 +56,9 @@ function countWords(text: string): number {
 export async function parsePage(
   filePath: string,
   relativePath: string,
+  rawContent?: string,
 ): Promise<ParsedPage> {
-  const raw = await readFile(filePath, "utf8");
+  const raw = rawContent ?? (await readFile(filePath, "utf8"));
   const parsed = matter(raw);
   const fm = parsed.data as Record<string, unknown>;
   const content = parsed.content;
