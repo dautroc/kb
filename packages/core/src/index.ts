@@ -21,3 +21,14 @@ export type { IndexStats } from "./indexer.js";
 
 export { searchWiki } from "./search.js";
 export type { SearchResult, SearchOptions } from "./search.js";
+
+export { readSource } from "./source-reader.js";
+export type { SourceContent, SourceType } from "./source-reader.js";
+
+export { createLlmAdapter } from "./llm.js";
+export type { LlmAdapter, LlmMessage } from "./llm.js";
+
+export type { IngestResult } from "./ingest-types.js";
+
+export { ingestSource } from "./ingest.js";
+export type { IngestOptions, IngestPlan } from "./ingest.js";
