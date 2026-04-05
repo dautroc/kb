@@ -19,9 +19,12 @@ async function collectMdFiles(dir: string): Promise<string[]> {
       recursive: true,
       withFileTypes: true,
     });
-    return entries
-      .filter((e) => e.isFile() && e.name.endsWith(".md"))
-      .map((e) => join((e as any).parentPath ?? e.path, e.name));
+    return (
+      entries
+        .filter((e) => e.isFile() && e.name.endsWith(".md"))
+        // parentPath added Node 21.4+; fall back to the pre-deprecation path property
+        .map((e) => join((e as any).parentPath ?? (e as any).path, e.name))
+    );
   } catch (err: unknown) {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
     return [];
