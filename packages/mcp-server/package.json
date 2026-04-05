@@ -11,5 +11,9 @@
   },
   "dependencies": {
     "@kb/core": "workspace:*"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.0",
+    "vitest": "^2.1.0"
   }
 }

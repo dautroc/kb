@@ -18,6 +18,8 @@
     "commander": "^12.1.0"
   },
   "devDependencies": {
-    "@types/node": "^25.5.2"
+    "@types/node": "^25.5.2",
+    "tsup": "^8.3.0",
+    "vitest": "^2.1.0"
   }
 }

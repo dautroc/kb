@@ -12,5 +12,9 @@
   "dependencies": {
     "@iarna/toml": "^2.2.5",
     "gray-matter": "^4.0.3"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.0",
+    "vitest": "^2.1.0"
   }
 }

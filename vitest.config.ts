@@ -3,6 +3,5 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     passWithNoTests: true,
-    projects: ["packages/cli", "packages/core", "packages/mcp-server"],
   },
 });
