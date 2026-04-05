@@ -161,6 +161,46 @@ model = "grok-1"
     await expect(parseConfig(configPath)).rejects.toThrow(/provider/i);
   });
 
+  it("throws when directories.sources is an absolute path", async () => {
+    const toml = `
+[project]
+name = "my-project"
+version = "0.1.0"
+
+[directories]
+sources = "/etc/passwd"
+wiki = "wiki"
+
+[llm]
+provider = "anthropic"
+model = "claude-sonnet-4-20250514"
+`;
+    const configPath = await writeConfig(toml);
+    await expect(parseConfig(configPath)).rejects.toThrow(
+      /directories\.sources must be a safe relative path/i,
+    );
+  });
+
+  it("throws when directories.wiki contains .. traversal", async () => {
+    const toml = `
+[project]
+name = "my-project"
+version = "0.1.0"
+
+[directories]
+sources = "sources"
+wiki = "../../wiki"
+
+[llm]
+provider = "anthropic"
+model = "claude-sonnet-4-20250514"
+`;
+    const configPath = await writeConfig(toml);
+    await expect(parseConfig(configPath)).rejects.toThrow(
+      /directories\.wiki must be a safe relative path/i,
+    );
+  });
+
   it("accepts all valid provider enum values", async () => {
     for (const provider of ["anthropic", "openai", "ollama"]) {
       const toml = `

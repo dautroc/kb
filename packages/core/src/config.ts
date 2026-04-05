@@ -22,6 +22,14 @@ export interface KbConfig {
 
 const VALID_PROVIDERS = ["anthropic", "openai", "ollama"] as const;
 
+function requireSafeRelativePath(val: string, field: string): void {
+  if (val.startsWith("/") || val.split("/").includes("..")) {
+    throw new Error(
+      `Invalid config: ${field} must be a safe relative path, got "${val}"`,
+    );
+  }
+}
+
 function requireString(
   obj: Record<string, unknown>,
   key: string,
@@ -75,7 +83,9 @@ export async function parseConfig(configPath: string): Promise<KbConfig> {
 
   const directories = requireSection(parsed, "directories");
   const sources = requireString(directories, "sources", "directories");
+  requireSafeRelativePath(sources, "directories.sources");
   const wiki = requireString(directories, "wiki", "directories");
+  requireSafeRelativePath(wiki, "directories.wiki");
 
   const llm = requireSection(parsed, "llm");
   const providerRaw = requireString(llm, "provider", "llm");

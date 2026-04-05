@@ -63,7 +63,10 @@ export async function tryLoadProject(
 ): Promise<Project | null> {
   try {
     return await loadProject(startDir);
-  } catch {
-    return null;
+  } catch (err: unknown) {
+    if (err instanceof Error && /no kb project found/i.test(err.message)) {
+      return null;
+    }
+    throw err;
   }
 }

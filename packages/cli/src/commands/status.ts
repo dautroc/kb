@@ -1,4 +1,4 @@
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, type Dirent } from "node:fs/promises";
 import { join } from "node:path";
 import { Command } from "commander";
 import chalk from "chalk";
@@ -15,13 +15,16 @@ async function countWikiPages(wikiDir: string): Promise<number> {
 }
 
 async function countSources(sourcesDir: string): Promise<number> {
-  let entries: string[];
+  let entries: Dirent[];
   try {
-    entries = await readdir(sourcesDir, { recursive: true });
+    entries = await readdir(sourcesDir, {
+      recursive: true,
+      withFileTypes: true,
+    });
   } catch {
     return 0;
   }
-  return entries.filter((f) => f !== ".gitkeep").length;
+  return entries.filter((e) => e.isFile() && e.name !== ".gitkeep").length;
 }
 
 async function readLastLogEntry(logPath: string): Promise<string | null> {

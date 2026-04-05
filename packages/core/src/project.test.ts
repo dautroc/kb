@@ -124,4 +124,15 @@ describe("tryLoadProject", () => {
     const project = await tryLoadProject(deepDir);
     expect(project).toBeNull();
   });
+
+  it("re-throws on config parse errors (not a not-found error)", async () => {
+    await mkdir(join(tmpDir, ".kb"), { recursive: true });
+    await writeFile(
+      join(tmpDir, ".kb", "config.toml"),
+      "this is not valid toml ::::",
+      "utf8",
+    );
+
+    await expect(tryLoadProject(tmpDir)).rejects.toThrow();
+  });
 });
