@@ -105,8 +105,14 @@ export async function lintProject(project: Project): Promise<LintResult> {
 
   const pagesChecked = relWikiPaths.length;
 
+  // Always collect source files so sourcesChecked is accurate
+  const sourceFiles = await collectSourceFiles(project.sourcesDir);
+  const sourcesChecked = sourceFiles.filter(
+    (f) => basename(f) !== ".gitkeep",
+  ).length;
+
   if (pagesChecked === 0) {
-    return { issues, pagesChecked: 0, sourcesChecked: 0 };
+    return { issues, pagesChecked: 0, sourcesChecked };
   }
 
   // Build page key set for wikilink resolution
@@ -188,8 +194,6 @@ export async function lintProject(project: Project): Promise<LintResult> {
         if (resolved !== null) {
           indexLinks.add(resolved);
         }
-        // Also store raw link for fuzzy matching
-        indexLinks.add(link);
       }
     }
   }
@@ -231,6 +235,7 @@ export async function lintProject(project: Project): Promise<LintResult> {
 
   // --- CHECK 3: STUB_PAGE ---
   for (const row of rows) {
+    if (basename(row.path) === "_index.md") continue;
     let links: string[] = [];
     try {
       links = JSON.parse(row.outgoing_links) as string[];
@@ -250,8 +255,6 @@ export async function lintProject(project: Project): Promise<LintResult> {
   // --- CHECK 4: STALE_SUMMARY ---
   // wiki/sources/foo-summary.md <-> sources/foo.*
   const wikiSourcesDir = join(project.wikiDir, "sources");
-  const absSourceFiles = await collectSourceFiles(project.sourcesDir);
-  const sourcesChecked = absSourceFiles.length;
 
   for (const rp of relWikiPaths) {
     // Check if the path is under wiki/sources/
@@ -269,7 +272,7 @@ export async function lintProject(project: Project): Promise<LintResult> {
       : summaryBasename;
 
     // Find matching source file
-    const matchingSource = absSourceFiles.find((sf) => {
+    const matchingSource = sourceFiles.find((sf) => {
       const sfBase = basename(sf, extname(sf));
       return sfBase === sourceBasename;
     });
@@ -277,12 +280,15 @@ export async function lintProject(project: Project): Promise<LintResult> {
     if (!matchingSource) continue;
 
     try {
-      const [sourceStat] = await Promise.all([stat(matchingSource)]);
       const summaryRow = metaMap.get(rp);
       if (!summaryRow) continue;
 
-      // mtime is the file's modification time in ms stored at index time
-      if (sourceStat.mtimeMs > summaryRow.mtime) {
+      const [sourceStat, summaryStat] = await Promise.all([
+        stat(matchingSource),
+        stat(join(project.root, summaryRow.path)),
+      ]);
+
+      if (sourceStat.mtimeMs > summaryStat.mtimeMs) {
         issues.push({
           severity: "warning",
           code: "STALE_SUMMARY",

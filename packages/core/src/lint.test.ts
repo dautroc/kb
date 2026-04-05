@@ -133,6 +133,18 @@ describe("lintProject", () => {
     expect(stubIssues.some((i) => i.path.includes("stub.md"))).toBe(true);
   });
 
+  it("does not flag _index.md as STUB_PAGE", async () => {
+    await writeFile(
+      join(project.wikiDir, "_index.md"),
+      `# Index\n\nShort.\n`,
+      "utf8",
+    );
+
+    const result = await lintProject(project);
+    const stubIssues = result.issues.filter((i) => i.code === "STUB_PAGE");
+    expect(stubIssues.every((i) => !i.path.endsWith("_index.md"))).toBe(true);
+  });
+
   it("does not flag a page with many words as STUB_PAGE", async () => {
     await writeFile(
       join(project.wikiDir, "_index.md"),
