@@ -1,4 +1,5 @@
-import { readdir, readFile, type Dirent } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
+import type { Dirent } from "node:fs";
 import { join } from "node:path";
 import { Command } from "commander";
 import chalk from "chalk";
