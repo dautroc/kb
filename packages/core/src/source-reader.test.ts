@@ -1,8 +1,12 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { writeFile, mkdir, rm } from "node:fs/promises";
+import { vi, describe, it, expect, beforeAll, afterAll } from "vitest";
+import { writeFile, mkdir, rm, mkdtemp } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { readSource } from "./source-reader.js";
+
+vi.mock("pdf-parse", () => ({
+  default: vi.fn().mockResolvedValue({ text: "extracted pdf text" }),
+}));
 
 const TMP = join(tmpdir(), "kb-source-reader-test-" + process.pid);
 
@@ -67,24 +71,29 @@ describe("readSource", () => {
     expect(result.filename).toBe("file---with-spaces.md");
   });
 
-  it("detects PDF type by extension", async () => {
-    // We can test the type detection without actually parsing a PDF
-    // by checking the extension detection logic
-    const filePath = join(TMP, "paper.pdf");
-    // Write a minimal valid-looking file (won't actually parse correctly but tests type detection)
-    await writeFile(filePath, "%PDF-1.4 minimal", "utf8");
+  it("reads PDF file and returns extracted text", async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), "kb-test-"));
+    const pdfPath = join(tmpDir, "test.pdf");
+    await writeFile(pdfPath, "fake pdf bytes");
 
-    // The readSource for PDF will fail to parse, so we test by checking type resolution
-    // We can test type directly by checking extension mapping
-    const ext = filePath.split(".").pop()?.toLowerCase();
-    expect(ext).toBe("pdf");
+    const result = await readSource(pdfPath);
+    expect(result.type).toBe("pdf");
+    expect(result.content).toBe("extracted pdf text");
+    expect(result.filename).toBe("test.pdf");
+
+    await rm(tmpDir, { recursive: true });
   });
 
-  it("returns 'url' type for https URLs", async () => {
-    // We'll mock this test without making actual network calls
-    // by checking that the function handles url detection
-    const path = "https://example.com";
-    const isUrl = path.startsWith("http://") || path.startsWith("https://");
-    expect(isUrl).toBe(true);
+  it("fetches URL and strips HTML", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      text: async () => "<html><body><h1>Hello</h1><p>World</p></body></html>",
+    }) as any;
+
+    const result = await readSource("https://example.com/page");
+    expect(result.type).toBe("url");
+    expect(result.content).toContain("Hello");
+    expect(result.content).toContain("World");
+    expect(result.filename).toContain("example.com");
   });
 });

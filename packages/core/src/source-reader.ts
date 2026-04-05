@@ -11,7 +11,7 @@ export interface SourceContent {
 }
 
 function sanitizeFilename(name: string): string {
-  return name.toLowerCase().replace(/ /g, "-");
+  return name.toLowerCase().replace(/\s/g, "-");
 }
 
 function detectType(sourcePath: string): SourceType {
@@ -28,9 +28,13 @@ function filenameFromUrl(url: string): string {
   try {
     const parsed = new URL(url);
     const parts = parsed.pathname.split("/").filter(Boolean);
-    const last = parts[parts.length - 1] ?? "page";
-    const name = last.includes(".") ? last : `${last}.html`;
-    return sanitizeFilename(name);
+    const last = parts[parts.length - 1];
+    const pagePart = last
+      ? last.includes(".")
+        ? last
+        : `${last}.html`
+      : "index.html";
+    return sanitizeFilename(`${parsed.hostname}-${pagePart}`);
   } catch {
     return "url-content.html";
   }
