@@ -1,6 +1,6 @@
 # kb
 
-A CLI tool that implements [Karpathy's LLM Wiki pattern](https://x.com/karpathy/status/1869369558691803569) for project knowledge management. Each project gets an isolated, LLM-maintained wiki. The LLM summarizes, cross-references, and maintains — the human curates sources and asks questions.
+A CLI tool that implements [Karpathy's LLM Wiki pattern](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) for project knowledge management. Each project gets an isolated, LLM-maintained wiki. The LLM summarizes, cross-references, and maintains — the human curates sources and asks questions.
 
 ## Install
 
