@@ -1,0 +1,33 @@
+import Database from "better-sqlite3";
+import { join } from "node:path";
+const SCHEMA_SQL = `
+CREATE VIRTUAL TABLE IF NOT EXISTS pages USING fts5(
+  path,
+  title,
+  content,
+  tags,
+  project,
+  tokenize='porter unicode61'
+);
+
+CREATE TABLE IF NOT EXISTS page_meta (
+  path TEXT PRIMARY KEY,
+  sha256 TEXT NOT NULL,
+  mtime INTEGER NOT NULL,
+  word_count INTEGER NOT NULL DEFAULT 0,
+  frontmatter TEXT NOT NULL DEFAULT '{}',
+  outgoing_links TEXT NOT NULL DEFAULT '[]',
+  updated_at INTEGER NOT NULL
+);
+`;
+export function openDb(project) {
+    const dbPath = join(project.kbDir, "index.db");
+    const db = new Database(dbPath);
+    db.pragma("journal_mode = WAL");
+    db.exec(SCHEMA_SQL);
+    return db;
+}
+export function closeDb(db) {
+    db.close();
+}
+//# sourceMappingURL=db.js.map

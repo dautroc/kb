@@ -61,13 +61,7 @@ export async function queryWiki(
   }
 
   // 3. Read full content of each result page
-  interface PageContext {
-    path: string;
-    title: string;
-    content: string;
-  }
-
-  const pages: PageContext[] = [];
+  const pages: Array<{ path: string; title: string; content: string }> = [];
   for (const result of searchResults) {
     const absPath = join(project.root, result.path);
     const content = await readFileSafe(absPath);
