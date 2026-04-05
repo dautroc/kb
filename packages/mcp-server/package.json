@@ -1,16 +1,19 @@
 {
-  "name": "@kb/mcp-server",
-  "version": "0.1.0",
+  "name": "kb-mcp",
+  "version": "0.1.1",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "build": "tsup && tsc --declaration --emitDeclarationOnly --outDir dist --project tsconfig.json",
+    "build": "tsup && tsc --declaration --emitDeclarationOnly --skipLibCheck --outDir dist --project tsconfig.json",
     "dev": "tsup --watch",
     "test": "vitest run"
   },
   "dependencies": {
-    "@kb/core": "workspace:*",
+    "kb-core": "0.1.2",
     "@modelcontextprotocol/sdk": "^1.0.0"
   },
   "devDependencies": {

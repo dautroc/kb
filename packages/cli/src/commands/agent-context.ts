@@ -2,7 +2,7 @@ import { readFile, writeFile, access } from "node:fs/promises";
 import { join } from "node:path";
 import { Command } from "commander";
 import chalk from "chalk";
-import { loadProject } from "@kb/core";
+import { loadProject } from "kb-core";
 
 export async function readSchemaLines(schemaPath: string): Promise<string> {
   let content: string;

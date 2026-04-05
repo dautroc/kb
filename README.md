@@ -5,13 +5,13 @@ A CLI tool that implements [Karpathy's LLM Wiki pattern](https://gist.github.com
 ## Install
 
 ```bash
-npm install -g @kb/cli
+npm install -g kb-tool
 ```
 
 Or run directly:
 
 ```bash
-npx @kb/cli init
+npx kb-tool init
 ```
 
 ## Quick Start

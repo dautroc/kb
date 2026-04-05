@@ -60,8 +60,14 @@ function stripHtml(html: string): string {
 }
 
 async function readPdf(filePath: string): Promise<string> {
-  // Dynamic import to avoid issues if pdf-parse not available in test env
-  const pdfParse = await import("pdf-parse").then((m) => m.default ?? m);
+  const pdfParse: (buf: Buffer) => Promise<{ text: string }> =
+    await import("pdf-parse")
+      .then((m) => m.default ?? m)
+      .catch(() => {
+        throw new Error(
+          "PDF support requires pdf-parse: run `npm install pdf-parse` in your project",
+        );
+      });
   const buffer = await readFile(filePath);
   const data = await pdfParse(buffer);
   return data.text;

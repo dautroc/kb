@@ -3,7 +3,7 @@ import type { Dirent } from "node:fs";
 import { join } from "node:path";
 import { Command } from "commander";
 import chalk from "chalk";
-import { loadProject } from "@kb/core";
+import { loadProject } from "kb-core";
 
 async function countWikiPages(wikiDir: string): Promise<number> {
   let entries: string[];

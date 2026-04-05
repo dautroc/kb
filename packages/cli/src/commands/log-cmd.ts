@@ -2,7 +2,7 @@ import { Command } from "commander";
 import chalk from "chalk";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { loadProject, parseLogEntries, type ParsedLogEntry } from "@kb/core";
+import { loadProject, parseLogEntries, type ParsedLogEntry } from "kb-core";
 
 export function makeLogCommand(): Command {
   const cmd = new Command("log");

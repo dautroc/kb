@@ -6,4 +6,5 @@ export default defineConfig({
   dts: false,
   sourcemap: true,
   clean: true,
+  external: ["pdf-parse", "better-sqlite3", "sharp", "@napi-rs/canvas"],
 });
