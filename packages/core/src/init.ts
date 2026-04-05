@@ -25,7 +25,6 @@ function buildConfigToml(projectName: string): string {
       provider: "anthropic",
       model: "claude-sonnet-4-20250514",
     },
-    dependencies: {},
   };
 
   const tomlStr = TOML.stringify(config as TOML.JsonMap);

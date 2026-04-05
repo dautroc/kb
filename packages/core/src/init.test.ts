@@ -91,9 +91,9 @@ describe("initProject", () => {
   });
 
   it("uses directory basename as project name when name is empty string", async () => {
-    // directory basename used when caller passes the dir name
+    // directory basename used when name is empty string (fallback logic)
     const dirName = tmpDir.split("/").pop()!;
-    await initProject({ name: dirName, directory: tmpDir });
+    await initProject({ name: "", directory: tmpDir });
 
     const configPath = join(tmpDir, ".kb", "config.toml");
     const content = await readFile(configPath, "utf8");
