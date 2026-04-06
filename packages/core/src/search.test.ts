@@ -2,11 +2,12 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mkdtemp, rm, mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import Database from "better-sqlite3";
 import type { Project } from "./project.js";
 import type { KbConfig } from "./config.js";
 import { indexProject } from "./indexer.js";
 import { openDb, closeDb } from "./db.js";
-import { searchWiki } from "./search.js";
+import { searchWiki, searchAcrossProjects } from "./search.js";
 
 const validConfig: KbConfig = {
   project: { name: "test-search", version: "0.1.0" },
@@ -213,5 +214,77 @@ describe("searchWiki", () => {
     } finally {
       closeDb(db);
     }
+  });
+});
+
+describe("searchAcrossProjects", () => {
+  function makeInMemoryDb(
+    projectName: string,
+    rows: Array<{ path: string; title: string; content: string }>,
+  ) {
+    const db = new Database(":memory:");
+    db.pragma("journal_mode = WAL");
+    db.exec(`
+      CREATE VIRTUAL TABLE IF NOT EXISTS pages USING fts5(
+        path, title, content, tags, project, tokenize='porter unicode61'
+      );
+    `);
+    const insert = db.prepare(
+      "INSERT INTO pages(path, title, content, tags, project) VALUES (?, ?, ?, ?, ?)",
+    );
+    for (const row of rows) {
+      insert.run(row.path, row.title, row.content, "", projectName);
+    }
+    return db;
+  }
+
+  it("merges results from multiple DBs and prefixes dep paths", () => {
+    const db1 = makeInMemoryDb("proj-a", [
+      {
+        path: "wiki/foo.md",
+        title: "Foo Page",
+        content: "authentication flow details",
+      },
+    ]);
+    const db2 = makeInMemoryDb("proj-b", [
+      {
+        path: "wiki/bar.md",
+        title: "Bar Page",
+        content: "authentication token",
+      },
+    ]);
+
+    const results = searchAcrossProjects(
+      [
+        { db: db1, projectName: "proj-a", prefix: undefined },
+        { db: db2, projectName: "proj-b", prefix: "proj-b" },
+      ],
+      "authentication",
+      { limit: 10 },
+    );
+
+    db1.close();
+    db2.close();
+
+    expect(results.length).toBeGreaterThan(0);
+    const proj2Result = results.find((r) => r.project === "proj-b");
+    expect(proj2Result).toBeDefined();
+    expect(proj2Result!.path).toBe("proj-b: wiki/bar.md");
+  });
+
+  it("returns results from current project with no prefix", () => {
+    const db = makeInMemoryDb("main", [
+      { path: "wiki/main.md", title: "Main Page", content: "authentication" },
+    ]);
+
+    const results = searchAcrossProjects(
+      [{ db, projectName: "main", prefix: undefined }],
+      "authentication",
+      { limit: 5 },
+    );
+    db.close();
+
+    expect(results[0]!.project).toBeUndefined();
+    expect(results[0]!.path).toBe("wiki/main.md");
   });
 });
