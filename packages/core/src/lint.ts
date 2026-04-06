@@ -1,10 +1,11 @@
-import { readdir, stat } from "node:fs/promises";
+import { readdir, stat, access } from "node:fs/promises";
 import { join, relative, basename, extname } from "node:path";
 import type { Project } from "./project.js";
 import { openDb, closeDb } from "./db.js";
 import { indexProject } from "./indexer.js";
+import { resolveDependencies } from "./deps.js";
 
-export type LintSeverity = "warning" | "info";
+export type LintSeverity = "error" | "warning" | "info";
 
 export interface LintIssue {
   severity: LintSeverity;
@@ -23,6 +24,7 @@ export interface LintResult {
 interface PageMetaRow {
   path: string;
   outgoing_links: string;
+  outgoing_cross_links: string;
   word_count: number;
   mtime: number;
   updated_at: number;
@@ -130,7 +132,7 @@ export async function lintProject(project: Project): Promise<LintResult> {
       .prepare<
         [],
         PageMetaRow
-      >("SELECT path, outgoing_links, word_count, mtime, updated_at FROM page_meta")
+      >("SELECT path, outgoing_links, outgoing_cross_links, word_count, mtime, updated_at FROM page_meta")
       .all();
   } finally {
     closeDb(db);
@@ -319,6 +321,59 @@ export async function lintProject(project: Project): Promise<LintResult> {
           path: rp,
           message: "Not in _index.md",
         });
+      }
+    }
+  }
+
+  // --- CROSS-PROJECT LINK CHECKS ---
+  await resolveDependencies(project);
+  const declaredDepNames = new Set(Object.keys(project.config.dependencies));
+
+  for (const row of rows) {
+    let crossLinks: Array<{ project: string; path: string }> = [];
+    try {
+      crossLinks = JSON.parse(row.outgoing_cross_links) as Array<{
+        project: string;
+        path: string;
+      }>;
+    } catch {
+      crossLinks = [];
+    }
+
+    for (const link of crossLinks) {
+      if (!declaredDepNames.has(link.project)) {
+        issues.push({
+          severity: "error",
+          code: "UNDECLARED_CROSS_LINK",
+          path: row.path,
+          message: `Cross-project link to undeclared dependency "${link.project}"`,
+          detail: `[[kb://${link.project}/${link.path}]]`,
+        });
+        continue;
+      }
+
+      const dep = project.dependencies?.find((d) => d.name === link.project);
+      if (dep) {
+        const targetAbs = join(dep.project.root, link.path);
+        let exists = false;
+        for (const candidate of [targetAbs, `${targetAbs}.md`]) {
+          try {
+            await access(candidate);
+            exists = true;
+            break;
+          } catch {
+            // try next
+          }
+        }
+        if (!exists) {
+          issues.push({
+            severity: "warning",
+            code: "UNRESOLVABLE_CROSS_LINK",
+            path: row.path,
+            message: `Cross-project link target not found: ${link.path} in "${link.project}"`,
+            detail: `[[kb://${link.project}/${link.path}]]`,
+          });
+        }
       }
     }
   }

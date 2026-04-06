@@ -6,6 +6,7 @@ export interface SearchResult {
   title: string;
   snippet: string;
   tags: string[];
+  project?: string;
 }
 
 export interface SearchOptions {
@@ -85,4 +86,37 @@ export function searchWiki(
   }));
 
   return results;
+}
+
+export interface CrossProjectTarget {
+  db: Database.Database;
+  projectName: string;
+  prefix?: string;
+}
+
+export function searchAcrossProjects(
+  targets: CrossProjectTarget[],
+  query: string,
+  options?: SearchOptions,
+): SearchResult[] {
+  const limit = options?.limit ?? 10;
+  const allResults: SearchResult[] = [];
+
+  for (const { db, projectName, prefix } of targets) {
+    const results = searchWiki(db, query, projectName, {
+      ...options,
+      limit: limit * 2,
+    });
+    for (const r of results) {
+      allResults.push({
+        ...r,
+        path: prefix ? `${prefix}: ${r.path}` : r.path,
+        project: prefix,
+      });
+    }
+  }
+
+  // BM25 rank from FTS5: more negative = better match
+  allResults.sort((a, b) => a.rank - b.rank);
+  return allResults.slice(0, limit);
 }

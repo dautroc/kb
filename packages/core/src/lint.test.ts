@@ -4,6 +4,8 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import type { Project } from "./project.js";
 import type { KbConfig } from "./config.js";
+import { loadProject } from "./project.js";
+import { indexProject } from "./indexer.js";
 import { lintProject } from "./lint.js";
 
 const validConfig: KbConfig = {
@@ -243,5 +245,72 @@ describe("lintProject", () => {
 
     const result = await lintProject(project);
     expect(result.pagesChecked).toBe(3);
+  });
+});
+
+describe("cross-project link lint checks", () => {
+  let tmpDir: string;
+
+  beforeEach(async () => {
+    tmpDir = await mkdtemp(join(tmpdir(), "kb-xlink-lint-test-"));
+  });
+
+  afterEach(async () => {
+    await rm(tmpDir, { recursive: true, force: true });
+  });
+
+  async function setupProject(
+    dir: string,
+    name: string,
+    deps = "",
+  ): Promise<void> {
+    await mkdir(join(dir, ".kb"), { recursive: true });
+    await mkdir(join(dir, "sources"), { recursive: true });
+    await mkdir(join(dir, "wiki"), { recursive: true });
+    await writeFile(
+      join(dir, ".kb", "config.toml"),
+      `[project]\nname = "${name}"\nversion = "0.1.0"\n[directories]\nsources = "sources"\nwiki = "wiki"\n[llm]\nprovider = "anthropic"\nmodel = "claude-sonnet-4-20250514"\n[dependencies]\n${deps}`,
+      "utf8",
+    );
+    await writeFile(join(dir, "wiki", "_index.md"), `# ${name}\n`, "utf8");
+  }
+
+  it("reports UNDECLARED_CROSS_LINK as error when dep is not in config", async () => {
+    await setupProject(tmpDir, "main");
+    await writeFile(
+      join(tmpDir, "wiki", "page-a.md"),
+      "# Page A\n\n[[kb://unknown-dep/wiki/foo]]\n",
+      "utf8",
+    );
+
+    const project = await loadProject(tmpDir);
+    // Index the project so page_meta has outgoing_cross_links populated
+    await indexProject(project);
+    const result = await lintProject(project);
+
+    const issue = result.issues.find((i) => i.code === "UNDECLARED_CROSS_LINK");
+    expect(issue).toBeDefined();
+    expect(issue!.severity).toBe("error");
+  });
+
+  it("reports UNRESOLVABLE_CROSS_LINK as warning when dep declared but page missing", async () => {
+    const depDir = join(tmpDir, "dep-a");
+    await setupProject(depDir, "dep-a");
+    await setupProject(tmpDir, "main", `dep-a = { path = "${depDir}" }`);
+    await writeFile(
+      join(tmpDir, "wiki", "page-a.md"),
+      "# Page A\n\n[[kb://dep-a/wiki/nonexistent-page]]\n",
+      "utf8",
+    );
+
+    const project = await loadProject(tmpDir);
+    await indexProject(project);
+    const result = await lintProject(project);
+
+    const issue = result.issues.find(
+      (i) => i.code === "UNRESOLVABLE_CROSS_LINK",
+    );
+    expect(issue).toBeDefined();
+    expect(issue!.severity).toBe("warning");
   });
 });

@@ -19,7 +19,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "kb-core": "0.1.6",
+    "kb-core": "workspace:*",
     "kb-mcp": "0.1.3",
     "chalk": "^5.3.0",
     "commander": "^12.1.0"

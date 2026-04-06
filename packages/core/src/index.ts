@@ -15,18 +15,22 @@ export {
 export type { KbConfig, GlobalConfig } from "./config.js";
 
 export { loadProject, tryLoadProject } from "./project.js";
-export type { Project } from "./project.js";
+export type { Project, ResolvedDependency } from "./project.js";
 
 export { openDb, closeDb } from "./db.js";
 
 export { parsePage } from "./markdown.js";
-export type { ParsedPage } from "./markdown.js";
+export type { ParsedPage, CrossLink } from "./markdown.js";
 
 export { indexProject } from "./indexer.js";
 export type { IndexStats } from "./indexer.js";
 
-export { searchWiki } from "./search.js";
-export type { SearchResult, SearchOptions } from "./search.js";
+export { searchWiki, searchAcrossProjects } from "./search.js";
+export type {
+  SearchResult,
+  SearchOptions,
+  CrossProjectTarget,
+} from "./search.js";
 
 export { readSource } from "./source-reader.js";
 export type { SourceContent, SourceType } from "./source-reader.js";
@@ -47,3 +51,12 @@ export type { LintIssue, LintResult, LintSeverity } from "./lint.js";
 
 export { parseLogEntries } from "./log-parser.js";
 export type { ParsedLogEntry } from "./log-parser.js";
+
+export { resolveDependencies, updateGitDep } from "./deps.js";
+
+export {
+  findWorkspaceRoot,
+  loadWorkspace,
+  parseWorkspaceConfig,
+} from "./workspace.js";
+export type { WorkspaceConfig, Workspace } from "./workspace.js";

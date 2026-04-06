@@ -14,8 +14,11 @@ import {
   ingestSource,
   lintProject,
   createLlmAdapter,
+  findWorkspaceRoot,
+  loadWorkspace,
+  searchAcrossProjects,
 } from "kb-core";
-import type { Project } from "kb-core";
+import type { Project, SearchResult } from "kb-core";
 
 // ---------------------------------------------------------------------------
 // Path safety helper
@@ -270,6 +273,49 @@ async function toolStatus(project: Project): Promise<string> {
   return lines.join("\n");
 }
 
+async function toolSearchWorkspace(
+  project: Project,
+  args: Record<string, unknown>,
+): Promise<string> {
+  const query = String(args.query ?? "");
+  const limit = args.limit !== undefined ? Number(args.limit) : 10;
+
+  if (!query) return "Error: query is required";
+
+  const wsRoot = await findWorkspaceRoot(project.root);
+  if (!wsRoot) {
+    return 'No workspace found. Run "kb workspace init" to create one.';
+  }
+
+  const ws = await loadWorkspace(wsRoot);
+  if (ws.members.length === 0) return "No member projects found in workspace.";
+
+  const dbs = ws.members.map((m) => openDb(m));
+  let results: SearchResult[];
+  try {
+    results = searchAcrossProjects(
+      ws.members.map((m, i) => ({
+        db: dbs[i]!,
+        projectName: m.name,
+        prefix: m.name,
+      })),
+      query,
+      { limit },
+    );
+  } finally {
+    for (const db of dbs) closeDb(db);
+  }
+
+  if (results!.length === 0) return "No results found.";
+
+  return results!
+    .map(
+      (r: SearchResult, i: number) =>
+        `${i + 1}. [${r.project ?? ""}] [${r.title}](${r.path})\n   Tags: ${r.tags.join(", ") || "(none)"}\n   ${r.snippet}`,
+    )
+    .join("\n\n");
+}
+
 // ---------------------------------------------------------------------------
 // Tool definitions
 // ---------------------------------------------------------------------------
@@ -367,6 +413,19 @@ const TOOLS = [
       properties: {},
     },
   },
+  {
+    name: "kb_search_workspace",
+    description:
+      "Search all projects in the workspace (requires .kbworkspace.toml at or above project root)",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        query: { type: "string", description: "Search query" },
+        limit: { type: "number", description: "Max results (default 10)" },
+      },
+      required: ["query"],
+    },
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -416,6 +475,9 @@ export async function startMcpServer(): Promise<void> {
           break;
         case "kb_status":
           text = await toolStatus(project);
+          break;
+        case "kb_search_workspace":
+          text = await toolSearchWorkspace(project, toolArgs);
           break;
         default:
           return {

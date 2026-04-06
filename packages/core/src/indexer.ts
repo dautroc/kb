@@ -67,6 +67,7 @@ function upsertParsedPage(
     page.wordCount,
     JSON.stringify(page.frontmatter),
     JSON.stringify(page.outgoingLinks),
+    JSON.stringify(page.outgoingCrossLinks),
     Date.now(),
   );
 }
@@ -94,14 +95,15 @@ export async function indexProject(
         "INSERT INTO pages(path, title, content, tags, project) VALUES (?, ?, ?, ?, ?)",
       ),
       upsertMeta: db.prepare(`
-        INSERT INTO page_meta(path, sha256, mtime, word_count, frontmatter, outgoing_links, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO page_meta(path, sha256, mtime, word_count, frontmatter, outgoing_links, outgoing_cross_links, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(path) DO UPDATE SET
           sha256 = excluded.sha256,
           mtime = excluded.mtime,
           word_count = excluded.word_count,
           frontmatter = excluded.frontmatter,
           outgoing_links = excluded.outgoing_links,
+          outgoing_cross_links = excluded.outgoing_cross_links,
           updated_at = excluded.updated_at
       `),
     };

@@ -91,6 +91,12 @@ model = "gpt-4"
     expect(project.sourcesDir).toBe(join(tmpDir, "my-sources"));
     expect(project.wikiDir).toBe(join(tmpDir, "my-wiki"));
   });
+
+  it("loads project with dependencies field undefined by default", async () => {
+    await setupKbProject(tmpDir);
+    const project = await loadProject(tmpDir);
+    expect(project.dependencies).toBeUndefined();
+  });
 });
 
 describe("tryLoadProject", () => {

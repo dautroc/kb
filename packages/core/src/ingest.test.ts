@@ -255,4 +255,59 @@ describe("ingestSource", () => {
       ingestSource(project, sourceFile, badLlm, { apply: false }),
     ).rejects.toThrow(/invalid llm response/i);
   });
+
+  it("includes dep wiki index in LLM prompt when project has path dependencies", async () => {
+    // Set up dep project
+    const depDir = join(TMP, "dep-x");
+    await mkdir(join(depDir, ".kb"), { recursive: true });
+    await mkdir(join(depDir, "sources"), { recursive: true });
+    await mkdir(join(depDir, "wiki"), { recursive: true });
+    await writeFile(
+      join(depDir, ".kb", "config.toml"),
+      `[project]\nname = "dep-x"\nversion = "0.1.0"\n[directories]\nsources = "sources"\nwiki = "wiki"\n[llm]\nprovider = "anthropic"\nmodel = "claude-sonnet-4-20250514"\n[dependencies]\n`,
+      "utf8",
+    );
+    await writeFile(
+      join(depDir, "wiki", "_index.md"),
+      "# Dep X Index\n\nThis is dep-x knowledge.",
+      "utf8",
+    );
+
+    // Set up main project with dep-x declared
+    const mainDir = join(TMP, "main-ingest");
+    await mkdir(join(mainDir, ".kb"), { recursive: true });
+    await mkdir(join(mainDir, "sources"), { recursive: true });
+    await mkdir(join(mainDir, "wiki"), { recursive: true });
+    await writeFile(join(mainDir, "wiki", "_index.md"), "# Main\n", "utf8");
+    await writeFile(
+      join(mainDir, ".kb", "config.toml"),
+      `[project]\nname = "main-ingest"\nversion = "0.1.0"\n[directories]\nsources = "sources"\nwiki = "wiki"\n[llm]\nprovider = "anthropic"\nmodel = "claude-sonnet-4-20250514"\n[dependencies]\ndep-x = { path = "${depDir}" }\n`,
+      "utf8",
+    );
+
+    const capturedMessages: string[] = [];
+    const mockLlm: LlmAdapter = {
+      complete: async (messages) => {
+        capturedMessages.push(messages[0]!.content);
+        return JSON.stringify({
+          summary: { path: "wiki/sources/test-summary.md", content: "# Test" },
+          updates: [],
+          newPages: [],
+          indexUpdate: "# Index",
+          logEntry: "test ingest",
+        });
+      },
+    };
+
+    const { loadProject } = await import("./project.js");
+    const project = await loadProject(mainDir);
+    const sourceFile = join(TMP, "test-source.md");
+    await writeFile(sourceFile, "# Source\n\nTest content.", "utf8");
+
+    await ingestSource(project, sourceFile, mockLlm, { apply: false });
+
+    expect(capturedMessages[0]).toContain("dep-x");
+    expect(capturedMessages[0]).toContain("Dep X Index");
+    expect(capturedMessages[0]).toContain("kb://dep-x");
+  });
 });

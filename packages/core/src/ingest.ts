@@ -5,6 +5,7 @@ import type { LlmAdapter } from "./llm.js";
 import type { IngestResult } from "./ingest-types.js";
 import { readSource } from "./source-reader.js";
 import { indexProject } from "./indexer.js";
+import { resolveDependencies } from "./deps.js";
 
 export interface IngestOptions {
   apply?: boolean;
@@ -219,12 +220,41 @@ export async function ingestSource(
   const schemaPath = join(project.kbDir, "schema.md");
   const schema = await readFileSafe(schemaPath);
 
+  // Load dep context if project has declared dependencies
+  let depContext = "";
+  const depEntries = Object.entries(project.config.dependencies);
+  if (depEntries.length > 0) {
+    await resolveDependencies(project);
+    if (project.dependencies && project.dependencies.length > 0) {
+      const depIndexes = await Promise.all(
+        project.dependencies.map(async ({ name, project: dep }) => {
+          const indexPath = join(dep.wikiDir, "_index.md");
+          let indexContent: string;
+          try {
+            indexContent = await readFile(indexPath, "utf8");
+          } catch {
+            indexContent = "(no index)";
+          }
+          return `- ${name}:\n${indexContent}`;
+        }),
+      );
+      const depLinkExamples = project.dependencies
+        .map((d) => `[[kb://${d.name}/path/to/page]]`)
+        .join(", ");
+      depContext =
+        `\n\n## Related Knowledge Bases\n` +
+        depIndexes.join("\n\n") +
+        `\n\nYou may reference these via cross-project links (e.g. ${depLinkExamples}) in generated content. ` +
+        `You must NOT propose updates to dependency wiki pages.`;
+    }
+  }
+
   // 4. Build user message
   const userMessage = `## Wiki Schema
 ${schema}
 
 ## Current Wiki Index
-${currentIndex}
+${currentIndex}${depContext}
 
 ## New Source: ${sourceContent.filename}
 ${sourceContent.content}
@@ -239,6 +269,19 @@ Integrate this source into the wiki following the schema above.`;
 
   // 6. Parse response
   const result = parseIngestResult(raw);
+
+  // Validate all proposed paths are within the project root
+  const resolvedRoot = resolve(project.root) + "/";
+  for (const p of [
+    result.summary.path,
+    ...result.updates.map((u) => u.path),
+    ...result.newPages.map((pg) => pg.path),
+  ]) {
+    const abs = resolve(join(project.root, p));
+    if (!abs.startsWith(resolvedRoot)) {
+      throw new Error(`Unsafe path rejected: "${p}" is outside project root`);
+    }
+  }
 
   // 7. Apply if requested
   if (apply) {
