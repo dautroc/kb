@@ -5,7 +5,6 @@ import { tmpdir } from "node:os";
 import type { Project } from "./project.js";
 import type { KbConfig } from "./config.js";
 import { loadProject } from "./project.js";
-import { openDb, closeDb } from "./db.js";
 import { indexProject } from "./indexer.js";
 import { lintProject } from "./lint.js";
 
@@ -286,10 +285,8 @@ describe("cross-project link lint checks", () => {
 
     const project = await loadProject(tmpDir);
     // Index the project so page_meta has outgoing_cross_links populated
-    const db = openDb(project);
-    await indexProject(project, db);
+    await indexProject(project);
     const result = await lintProject(project);
-    closeDb(db);
 
     const issue = result.issues.find((i) => i.code === "UNDECLARED_CROSS_LINK");
     expect(issue).toBeDefined();
@@ -307,10 +304,8 @@ describe("cross-project link lint checks", () => {
     );
 
     const project = await loadProject(tmpDir);
-    const db = openDb(project);
-    await indexProject(project, db);
+    await indexProject(project);
     const result = await lintProject(project);
-    closeDb(db);
 
     const issue = result.issues.find(
       (i) => i.code === "UNRESOLVABLE_CROSS_LINK",
