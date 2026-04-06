@@ -1,4 +1,6 @@
 import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+import { homedir } from "node:os";
 import TOML from "@iarna/toml";
 
 export interface KbConfig {
@@ -19,6 +21,13 @@ export interface KbConfig {
     { path?: string; git?: string; branch?: string; mode?: string }
   >;
 }
+
+export type GlobalConfig = {
+  project?: { name?: string; version?: string };
+  directories?: { sources?: string; wiki?: string };
+  llm?: { provider?: KbConfig["llm"]["provider"]; model?: string };
+  dependencies?: KbConfig["dependencies"];
+};
 
 const VALID_PROVIDERS = ["anthropic", "openai", "ollama", "zai"] as const;
 
@@ -58,6 +67,101 @@ function requireSection(
     throw new Error(`Invalid config: missing required section "[${key}]"`);
   }
   return val as Record<string, unknown>;
+}
+
+export async function parseGlobalConfig(path?: string): Promise<GlobalConfig> {
+  const resolvedPath = path ?? join(homedir(), ".kb", "config.toml");
+
+  let raw: string;
+  try {
+    raw = await readFile(resolvedPath, "utf8");
+  } catch {
+    return {};
+  }
+
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = TOML.parse(raw) as Record<string, unknown>;
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(
+      `Invalid TOML in global config file ${resolvedPath}: ${message}`,
+    );
+  }
+
+  const result: GlobalConfig = {};
+
+  const rawProject = parsed["project"];
+  if (
+    rawProject !== undefined &&
+    typeof rawProject === "object" &&
+    !Array.isArray(rawProject)
+  ) {
+    const p = rawProject as Record<string, unknown>;
+    result.project = {
+      ...(typeof p["name"] === "string" ? { name: p["name"] } : {}),
+      ...(typeof p["version"] === "string" ? { version: p["version"] } : {}),
+    };
+  }
+
+  const rawDirectories = parsed["directories"];
+  if (
+    rawDirectories !== undefined &&
+    typeof rawDirectories === "object" &&
+    !Array.isArray(rawDirectories)
+  ) {
+    const d = rawDirectories as Record<string, unknown>;
+    result.directories = {
+      ...(typeof d["sources"] === "string" ? { sources: d["sources"] } : {}),
+      ...(typeof d["wiki"] === "string" ? { wiki: d["wiki"] } : {}),
+    };
+  }
+
+  const rawLlm = parsed["llm"];
+  if (
+    rawLlm !== undefined &&
+    typeof rawLlm === "object" &&
+    !Array.isArray(rawLlm)
+  ) {
+    const l = rawLlm as Record<string, unknown>;
+    result.llm = {
+      ...(typeof l["provider"] === "string"
+        ? { provider: l["provider"] as KbConfig["llm"]["provider"] }
+        : {}),
+      ...(typeof l["model"] === "string" ? { model: l["model"] } : {}),
+    };
+  }
+
+  const rawDeps = parsed["dependencies"];
+  if (
+    rawDeps !== undefined &&
+    typeof rawDeps === "object" &&
+    !Array.isArray(rawDeps)
+  ) {
+    const dependencies: KbConfig["dependencies"] = {};
+    for (const [depKey, depVal] of Object.entries(
+      rawDeps as Record<string, unknown>,
+    )) {
+      if (
+        typeof depVal === "object" &&
+        depVal !== null &&
+        !Array.isArray(depVal)
+      ) {
+        const dep = depVal as Record<string, unknown>;
+        dependencies[depKey] = {
+          ...(typeof dep["path"] === "string" ? { path: dep["path"] } : {}),
+          ...(typeof dep["git"] === "string" ? { git: dep["git"] } : {}),
+          ...(typeof dep["branch"] === "string"
+            ? { branch: dep["branch"] }
+            : {}),
+          ...(typeof dep["mode"] === "string" ? { mode: dep["mode"] } : {}),
+        };
+      }
+    }
+    result.dependencies = dependencies;
+  }
+
+  return result;
 }
 
 export async function parseConfig(configPath: string): Promise<KbConfig> {

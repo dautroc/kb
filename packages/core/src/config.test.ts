@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mkdtemp, rm, writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { parseConfig } from "./config.js";
+import { parseConfig, parseGlobalConfig } from "./config.js";
 
 describe("parseConfig", () => {
   let tmpDir: string;
@@ -220,5 +220,57 @@ model = "some-model"
       const config = await parseConfig(configPath);
       expect(config.llm.provider).toBe(provider);
     }
+  });
+});
+
+describe("parseGlobalConfig", () => {
+  let tmpDir: string;
+
+  beforeEach(async () => {
+    tmpDir = await mkdtemp(join(tmpdir(), "kb-global-config-test-"));
+  });
+
+  afterEach(async () => {
+    await rm(tmpDir, { recursive: true, force: true });
+  });
+
+  it("returns {} when file does not exist", async () => {
+    const result = await parseGlobalConfig(
+      join(tmpDir, "nonexistent", "config.toml"),
+    );
+    expect(result).toEqual({});
+  });
+
+  it("throws on malformed TOML", async () => {
+    const p = join(tmpDir, "config.toml");
+    await writeFile(p, "this is not valid toml ::::", "utf8");
+    await expect(parseGlobalConfig(p)).rejects.toThrow(/invalid toml/i);
+  });
+
+  it("parses a partial config with only [llm]", async () => {
+    const p = join(tmpDir, "config.toml");
+    await writeFile(
+      p,
+      `[llm]\nprovider = "openai"\nmodel = "gpt-4o"\n`,
+      "utf8",
+    );
+    const result = await parseGlobalConfig(p);
+    expect(result.llm?.provider).toBe("openai");
+    expect(result.llm?.model).toBe("gpt-4o");
+    expect(result.project).toBeUndefined();
+    expect(result.directories).toBeUndefined();
+  });
+
+  it("parses a full global config", async () => {
+    const p = join(tmpDir, "config.toml");
+    await writeFile(
+      p,
+      `[llm]\nprovider = "anthropic"\nmodel = "claude-sonnet-4-20250514"\n\n[directories]\nsources = "src"\nwiki = "docs"\n`,
+      "utf8",
+    );
+    const result = await parseGlobalConfig(p);
+    expect(result.llm?.provider).toBe("anthropic");
+    expect(result.directories?.sources).toBe("src");
+    expect(result.directories?.wiki).toBe("docs");
   });
 });
