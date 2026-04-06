@@ -39,7 +39,7 @@ export function parseWorkspaceConfig(
 
   const result: WorkspaceConfig = { workspace: { members } };
 
-  const rawDefaults = wsObj["defaults"];
+  const rawDefaults = raw["defaults"];
   if (
     rawDefaults &&
     typeof rawDefaults === "object" &&
