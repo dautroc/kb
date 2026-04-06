@@ -1,6 +1,6 @@
 import { access } from "node:fs/promises";
 import { join, dirname, resolve } from "node:path";
-import { parseConfig, type KbConfig } from "./config.js";
+import { resolveConfig, type KbConfig } from "./config.js";
 
 export interface Project {
   name: string;
@@ -29,7 +29,6 @@ async function findProjectRoot(startDir: string): Promise<string | null> {
     }
     const parent = dirname(current);
     if (parent === current) {
-      // Reached filesystem root
       return null;
     }
     current = parent;
@@ -45,8 +44,7 @@ export async function loadProject(startDir: string): Promise<Project> {
   }
 
   const kbDir = join(root, ".kb");
-  const configPath = join(kbDir, "config.toml");
-  const config = await parseConfig(configPath);
+  const config = await resolveConfig(root);
 
   return {
     name: config.project.name,

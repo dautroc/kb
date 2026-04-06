@@ -6,6 +6,7 @@ import {
   parseGlobalConfig,
   parseProjectConfig,
   mergeConfigs,
+  resolveConfig,
   type KbConfig,
 } from "./config.js";
 
@@ -319,6 +320,114 @@ describe("mergeConfigs", () => {
   it("throws with helpful message mentioning both config locations", () => {
     expect(() => mergeConfigs({}, {})).toThrow(
       /~\/.kb\/config\.toml.*\.kb\/config\.toml|\.kb\/config\.toml.*~\/.kb\/config\.toml/i,
+    );
+  });
+});
+
+describe("resolveConfig", () => {
+  let tmpDir: string;
+
+  beforeEach(async () => {
+    tmpDir = await mkdtemp(join(tmpdir(), "kb-resolve-config-test-"));
+  });
+
+  afterEach(async () => {
+    await rm(tmpDir, { recursive: true, force: true });
+  });
+
+  async function writeProjectConfig(content: string): Promise<void> {
+    const kbDir = join(tmpDir, ".kb");
+    await mkdir(kbDir, { recursive: true });
+    await writeFile(join(kbDir, "config.toml"), content, "utf8");
+  }
+
+  async function writeGlobalConfig(
+    dir: string,
+    content: string,
+  ): Promise<string> {
+    await mkdir(dir, { recursive: true });
+    const p = join(dir, "config.toml");
+    await writeFile(p, content, "utf8");
+    return p;
+  }
+
+  it("resolves from project config alone (backward compat)", async () => {
+    await writeProjectConfig(`
+[project]
+name = "my-proj"
+version = "0.1.0"
+
+[directories]
+sources = "sources"
+wiki = "wiki"
+
+[llm]
+provider = "anthropic"
+model = "claude-sonnet-4-20250514"
+`);
+    const globalPath = join(tmpDir, "global", "config.toml");
+    const result = await resolveConfig(tmpDir, globalPath);
+    expect(result.project.name).toBe("my-proj");
+    expect(result.llm.provider).toBe("anthropic");
+  });
+
+  it("fills missing llm from global config", async () => {
+    await writeProjectConfig(`
+[project]
+name = "my-proj"
+version = "0.1.0"
+
+[directories]
+sources = "sources"
+wiki = "wiki"
+`);
+    const globalDir = join(tmpDir, "global");
+    await writeGlobalConfig(
+      globalDir,
+      `[llm]\nprovider = "openai"\nmodel = "gpt-4o"\n`,
+    );
+    const result = await resolveConfig(tmpDir, join(globalDir, "config.toml"));
+    expect(result.llm.provider).toBe("openai");
+    expect(result.llm.model).toBe("gpt-4o");
+  });
+
+  it("project wins over global when both set the same field", async () => {
+    await writeProjectConfig(`
+[project]
+name = "my-proj"
+version = "0.1.0"
+
+[directories]
+sources = "sources"
+wiki = "wiki"
+
+[llm]
+provider = "anthropic"
+model = "claude-sonnet-4-20250514"
+`);
+    const globalDir = join(tmpDir, "global");
+    await writeGlobalConfig(
+      globalDir,
+      `[llm]\nprovider = "openai"\nmodel = "gpt-4o"\n`,
+    );
+    const result = await resolveConfig(tmpDir, join(globalDir, "config.toml"));
+    expect(result.llm.provider).toBe("anthropic");
+    expect(result.llm.model).toBe("claude-sonnet-4-20250514");
+  });
+
+  it("throws when neither global nor project provides required fields", async () => {
+    await writeProjectConfig(`
+[project]
+name = "my-proj"
+version = "0.1.0"
+
+[directories]
+sources = "sources"
+wiki = "wiki"
+`);
+    const globalPath = join(tmpDir, "global", "config.toml");
+    await expect(resolveConfig(tmpDir, globalPath)).rejects.toThrow(
+      /llm\.provider/i,
     );
   });
 });
