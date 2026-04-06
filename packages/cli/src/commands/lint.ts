@@ -36,7 +36,7 @@ export function makeLintCommand(): Command {
               `${chalk.red("✗")}  ${chalk.cyan(issue.path)} — ${issue.message} ${code}`,
             );
           } else if (issue.severity === "warning") {
-            if (issue.code === "BROKEN_LINK") {
+            if (issue.code === "BROKEN_LINK" && issue.detail != null) {
               console.log(
                 `${chalk.yellow("⚠")}  ${chalk.cyan(issue.path)} → [[${issue.detail}]] not found ${code}`,
               );

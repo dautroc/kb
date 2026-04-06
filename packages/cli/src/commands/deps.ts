@@ -74,8 +74,7 @@ export function makeDepsCommand(): Command {
           try {
             await updateGitDep(project, name);
             const cacheDir = join(project.kbDir, "cache", name);
-            const { loadProject: lp } = await import("kb-core");
-            const depProject = await lp(cacheDir);
+            const depProject = await loadProject(cacheDir);
             await indexProject(depProject);
             console.log(chalk.green("done"));
           } catch (err: unknown) {

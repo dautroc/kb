@@ -155,10 +155,8 @@ export function makeSearchCommand(): Command {
 
           // ── Single dep search ──────────────────────────────────────────
           if (options.project) {
-            await resolveDependencies(project);
-            const dep = project.dependencies?.find(
-              (d) => d.name === options.project,
-            );
+            const resolvedDeps = await resolveDependencies(project);
+            const dep = resolvedDeps.find((d) => d.name === options.project);
             if (!dep) {
               console.error(
                 chalk.red(
