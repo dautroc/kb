@@ -69,6 +69,7 @@ describe("openDb", () => {
     expect(colNames).toContain("mtime");
     expect(colNames).toContain("word_count");
     expect(colNames).toContain("outgoing_links");
+    expect(colNames).toContain("outgoing_cross_links");
     closeDb(db);
   });
 
