@@ -111,9 +111,15 @@ export async function parseGlobalConfig(path?: string): Promise<GlobalConfig> {
     !Array.isArray(rawDirectories)
   ) {
     const d = rawDirectories as Record<string, unknown>;
+    const isSafePath = (v: string) =>
+      !v.startsWith("/") && !v.split("/").includes("..");
     result.directories = {
-      ...(typeof d["sources"] === "string" ? { sources: d["sources"] } : {}),
-      ...(typeof d["wiki"] === "string" ? { wiki: d["wiki"] } : {}),
+      ...(typeof d["sources"] === "string" && isSafePath(d["sources"])
+        ? { sources: d["sources"] }
+        : {}),
+      ...(typeof d["wiki"] === "string" && isSafePath(d["wiki"])
+        ? { wiki: d["wiki"] }
+        : {}),
     };
   }
 
@@ -125,7 +131,8 @@ export async function parseGlobalConfig(path?: string): Promise<GlobalConfig> {
   ) {
     const l = rawLlm as Record<string, unknown>;
     result.llm = {
-      ...(typeof l["provider"] === "string"
+      ...(typeof l["provider"] === "string" &&
+      (VALID_PROVIDERS as readonly string[]).includes(l["provider"])
         ? { provider: l["provider"] as KbConfig["llm"]["provider"] }
         : {}),
       ...(typeof l["model"] === "string" ? { model: l["model"] } : {}),
