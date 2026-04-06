@@ -1,29 +1,51 @@
 import { mkdir, writeFile, access, rm } from "node:fs/promises";
 import { join, basename } from "node:path";
+import { homedir } from "node:os";
 import TOML from "@iarna/toml";
+import { parseGlobalConfig, type GlobalConfig } from "./config.js";
 
 export interface InitOptions {
   name: string;
-  directory: string; // absolute path where to init
+  directory: string;
+  globalConfigPath?: string;
 }
 
 function resolveProjectName(options: InitOptions): string {
   return options.name || basename(options.directory);
 }
 
-function buildConfigToml(projectName: string): string {
+const HARDCODED_DEFAULTS = {
+  llm: { provider: "anthropic" as const, model: "claude-sonnet-4-20250514" },
+  directories: { sources: "sources", wiki: "wiki" },
+};
+
+function buildGlobalConfigToml(): string {
+  return TOML.stringify({
+    llm: {
+      provider: HARDCODED_DEFAULTS.llm.provider,
+      model: HARDCODED_DEFAULTS.llm.model,
+    },
+    directories: {
+      sources: HARDCODED_DEFAULTS.directories.sources,
+      wiki: HARDCODED_DEFAULTS.directories.wiki,
+    },
+  } as TOML.JsonMap);
+}
+
+function buildConfigToml(projectName: string, seed: GlobalConfig): string {
   const config = {
     project: {
       name: projectName,
       version: "0.1.0",
     },
     directories: {
-      sources: "sources",
-      wiki: "wiki",
+      sources:
+        seed.directories?.sources ?? HARDCODED_DEFAULTS.directories.sources,
+      wiki: seed.directories?.wiki ?? HARDCODED_DEFAULTS.directories.wiki,
     },
     llm: {
-      provider: "anthropic",
-      model: "claude-sonnet-4-20250514",
+      provider: seed.llm?.provider ?? HARDCODED_DEFAULTS.llm.provider,
+      model: seed.llm?.model ?? HARDCODED_DEFAULTS.llm.model,
     },
   };
 
@@ -32,6 +54,15 @@ function buildConfigToml(projectName: string): string {
     tomlStr +
     '\n[dependencies]\n# shared-glossary = { path = "../shared-glossary" }\n'
   );
+}
+
+async function globalConfigExists(path: string): Promise<boolean> {
+  try {
+    await access(path);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function buildSchemaMd(): string {
@@ -262,12 +293,23 @@ async function kbDirExists(directory: string): Promise<boolean> {
 export async function initProject(options: InitOptions): Promise<void> {
   const projectName = resolveProjectName(options);
   const { directory } = options;
+  const globalConfigPath =
+    options.globalConfigPath ?? join(homedir(), ".kb", "config.toml");
 
   if (await kbDirExists(directory)) {
     throw new Error(
       `Knowledge base already initialized: .kb/ already exists in ${directory}`,
     );
   }
+
+  // Ensure global config exists; create with defaults if not
+  if (!(await globalConfigExists(globalConfigPath))) {
+    await mkdir(join(globalConfigPath, ".."), { recursive: true });
+    await writeFile(globalConfigPath, buildGlobalConfigToml(), "utf8");
+  }
+
+  // Seed project config from global defaults
+  const globalCfg = await parseGlobalConfig(globalConfigPath);
 
   const isoDate = new Date().toISOString().split("T")[0]!;
 
@@ -281,7 +323,7 @@ export async function initProject(options: InitOptions): Promise<void> {
     await Promise.all([
       writeFile(
         join(directory, ".kb", "config.toml"),
-        buildConfigToml(projectName),
+        buildConfigToml(projectName, globalCfg),
         "utf8",
       ),
       writeFile(join(directory, ".kb", "schema.md"), buildSchemaMd(), "utf8"),
@@ -298,7 +340,6 @@ export async function initProject(options: InitOptions): Promise<void> {
       ),
     ]);
   } catch (error) {
-    // Rollback: remove .kb/ if it was created
     await rm(join(directory, ".kb"), { recursive: true, force: true });
     throw error;
   }
