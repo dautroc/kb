@@ -18,7 +18,7 @@ import {
   loadWorkspace,
   searchAcrossProjects,
 } from "kb-core";
-import type { Project } from "kb-core";
+import type { Project, SearchResult } from "kb-core";
 
 // ---------------------------------------------------------------------------
 // Path safety helper
@@ -291,7 +291,7 @@ async function toolSearchWorkspace(
   if (ws.members.length === 0) return "No member projects found in workspace.";
 
   const dbs = ws.members.map((m) => openDb(m));
-  let results;
+  let results: SearchResult[];
   try {
     results = searchAcrossProjects(
       ws.members.map((m, i) => ({
@@ -306,11 +306,11 @@ async function toolSearchWorkspace(
     for (const db of dbs) closeDb(db);
   }
 
-  if (results.length === 0) return "No results found.";
+  if (results!.length === 0) return "No results found.";
 
-  return results
+  return results!
     .map(
-      (r, i) =>
+      (r: SearchResult, i: number) =>
         `${i + 1}. [${r.project ?? ""}] [${r.title}](${r.path})\n   Tags: ${r.tags.join(", ") || "(none)"}\n   ${r.snippet}`,
     )
     .join("\n\n");

@@ -13,7 +13,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "kb-core": "0.1.6",
+    "kb-core": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.0.0"
   },
   "devDependencies": {
