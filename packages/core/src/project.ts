@@ -2,6 +2,12 @@ import { access } from "node:fs/promises";
 import { join, dirname, resolve } from "node:path";
 import { resolveConfig, type KbConfig } from "./config.js";
 
+export interface ResolvedDependency {
+  name: string;
+  project: Project;
+  mode: "readwrite" | "readonly";
+}
+
 export interface Project {
   name: string;
   root: string;
@@ -9,6 +15,7 @@ export interface Project {
   sourcesDir: string;
   wikiDir: string;
   config: KbConfig;
+  dependencies?: ResolvedDependency[];
 }
 
 async function hasKbDir(dir: string): Promise<boolean> {
