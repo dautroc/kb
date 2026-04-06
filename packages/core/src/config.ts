@@ -73,15 +73,9 @@ export async function parseGlobalConfig(path?: string): Promise<GlobalConfig> {
     !Array.isArray(rawDirectories)
   ) {
     const d = rawDirectories as Record<string, unknown>;
-    const isSafePath = (v: string) =>
-      !v.startsWith("/") && !v.split("/").includes("..");
     result.directories = {
-      ...(typeof d["sources"] === "string" && isSafePath(d["sources"])
-        ? { sources: d["sources"] }
-        : {}),
-      ...(typeof d["wiki"] === "string" && isSafePath(d["wiki"])
-        ? { wiki: d["wiki"] }
-        : {}),
+      ...(typeof d["sources"] === "string" ? { sources: d["sources"] } : {}),
+      ...(typeof d["wiki"] === "string" ? { wiki: d["wiki"] } : {}),
     };
   }
 
