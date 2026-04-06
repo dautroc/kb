@@ -31,7 +31,11 @@ export function makeLintCommand(): Command {
 
         for (const issue of result.issues) {
           const code = chalk.gray(`[${issue.code}]`);
-          if (issue.severity === "warning") {
+          if (issue.severity === "error") {
+            console.log(
+              `${chalk.red("✗")}  ${chalk.cyan(issue.path)} — ${issue.message} ${code}`,
+            );
+          } else if (issue.severity === "warning") {
             if (issue.code === "BROKEN_LINK") {
               console.log(
                 `${chalk.yellow("⚠")}  ${chalk.cyan(issue.path)} → [[${issue.detail}]] not found ${code}`,
@@ -48,12 +52,19 @@ export function makeLintCommand(): Command {
           }
         }
 
+        const errors = result.issues.filter(
+          (i) => i.severity === "error",
+        ).length;
         const warnings = result.issues.filter(
           (i) => i.severity === "warning",
         ).length;
         const infos = result.issues.filter((i) => i.severity === "info").length;
 
         const parts: string[] = [];
+        if (errors > 0)
+          parts.push(
+            `${chalk.red(String(errors))} error${errors !== 1 ? "s" : ""}`,
+          );
         if (warnings > 0)
           parts.push(
             `${chalk.yellow(String(warnings))} warning${warnings !== 1 ? "s" : ""}`,
