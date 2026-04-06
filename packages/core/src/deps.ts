@@ -55,6 +55,10 @@ async function resolveWithVisited(
   const resolved: ResolvedDependency[] = [];
 
   for (const [name, depConfig] of entries) {
+    if (name.includes("/") || name.includes("\\") || name.includes("..")) {
+      throw new Error(`Invalid dependency name: "${name}"`);
+    }
+
     let depRoot: string;
 
     if (depConfig.path) {
