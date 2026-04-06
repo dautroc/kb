@@ -38,18 +38,76 @@ kb lint
 
 ## Commands
 
-| Command                                                 | Description                                                      |
-| ------------------------------------------------------- | ---------------------------------------------------------------- |
-| `kb init [name]`                                        | Initialize a new knowledge base in the current directory         |
-| `kb status`                                             | Project overview — page count, source count, last activity       |
-| `kb ingest <source> [--apply] [--batch]`                | Process a source into the wiki (dry-run by default)              |
-| `kb query <question> [--save <path>]`                   | Ask a question against the wiki                                  |
-| `kb search <query> [--limit N] [--tags t1,t2] [--json]` | BM25 full-text search                                            |
-| `kb lint [--deep]`                                      | Health-check the wiki for broken links, orphans, stale summaries |
-| `kb index [--rebuild]`                                  | Rebuild the search index                                         |
-| `kb log [--last N]`                                     | View recent activity                                             |
-| `kb mcp`                                                | Start an MCP server (stdio) for agent integration                |
-| `kb agent-context [--write]`                            | Generate a CLAUDE.md / AGENTS.md integration block               |
+| Command                                                                                  | Description                                                      |
+| ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `kb init [name]`                                                                         | Initialize a new knowledge base in the current directory         |
+| `kb status`                                                                              | Project overview — page count, source count, last activity       |
+| `kb ingest <source> [--apply] [--batch]`                                                 | Process a source into the wiki (dry-run by default)              |
+| `kb query <question> [--save <path>]`                                                    | Ask a question against the wiki                                  |
+| `kb search <query> [--limit N] [--tags t1,t2] [--deps] [--workspace] [--project <name>]` | BM25 full-text search (optionally across deps or workspace)      |
+| `kb lint [--deep]`                                                                       | Health-check the wiki for broken links, orphans, stale summaries |
+| `kb index [--rebuild]`                                                                   | Rebuild the search index                                         |
+| `kb log [--last N]`                                                                      | View recent activity                                             |
+| `kb deps`                                                                                | Show resolved dependency tree                                    |
+| `kb deps update`                                                                         | Pull latest changes for all git-backed dependencies              |
+| `kb workspace init [--members <globs>]`                                                  | Create a `.kbworkspace.toml` workspace manifest                  |
+| `kb mcp`                                                                                 | Start an MCP server (stdio) for agent integration                |
+| `kb agent-context [--write]`                                                             | Generate a CLAUDE.md / AGENTS.md integration block               |
+
+## Multi-Project Workspaces
+
+`kb` supports declaring dependencies on other kb projects and searching/linking across them.
+
+### Declaring dependencies
+
+In `.kb/config.toml`:
+
+```toml
+[dependencies]
+shared-glossary = { path = "../shared-glossary" }
+company-standards = { git = "https://github.com/org/standards.git", branch = "main" }
+```
+
+### Cross-project links
+
+Reference pages in dependencies using `[[kb://dep-name/path/to/page]]` syntax:
+
+```markdown
+See [[kb://shared-glossary/wiki/concepts/api-gateway]] for details.
+See [[kb://shared-glossary/wiki/concepts/api-gateway|API Gateway]] for a named link.
+```
+
+`kb lint` reports `UNDECLARED_CROSS_LINK` (error) for unknown dep names and `UNRESOLVABLE_CROSS_LINK` (warning) for missing target pages.
+
+### Cross-project search
+
+```bash
+kb search "auth" --deps            # current project + all declared deps
+kb search "auth" --project shared-glossary  # single dep only
+kb search "auth" --workspace       # all projects in .kbworkspace.toml
+```
+
+### Workspace manifest
+
+```bash
+kb workspace init --members "projects/*,shared/*"
+```
+
+Creates `.kbworkspace.toml` at the current directory:
+
+```toml
+[workspace]
+members = ["projects/*", "shared/*"]
+```
+
+### Dependency commands
+
+```bash
+kb deps              # show resolved dependency tree with modes
+kb deps update       # git pull --ff-only for all git-backed deps
+```
+
+---
 
 ## Project Structure
 
@@ -170,16 +228,17 @@ kb lint
 
 ### Available tools
 
-| Tool              | Description                                       |
-| ----------------- | ------------------------------------------------- |
-| `kb_search`       | BM25 full-text search across wiki pages           |
-| `kb_get_page`     | Read the full content of a wiki page              |
-| `kb_get_index`    | Read `wiki/_index.md`                             |
-| `kb_list_sources` | List source files with size and modification time |
-| `kb_ingest`       | Dry-run ingest of a source file (shows plan)      |
-| `kb_lint`         | Run health checks on the wiki                     |
-| `kb_backlinks`    | Find all pages that link to a given page          |
-| `kb_status`       | Project overview — page count, source count, etc. |
+| Tool                  | Description                                                         |
+| --------------------- | ------------------------------------------------------------------- |
+| `kb_search`           | BM25 full-text search across wiki pages                             |
+| `kb_search_workspace` | Search all projects in the workspace (requires `.kbworkspace.toml`) |
+| `kb_get_page`         | Read the full content of a wiki page                                |
+| `kb_get_index`        | Read `wiki/_index.md`                                               |
+| `kb_list_sources`     | List source files with size and modification time                   |
+| `kb_ingest`           | Dry-run ingest of a source file (shows plan)                        |
+| `kb_lint`             | Run health checks on the wiki                                       |
+| `kb_backlinks`        | Find all pages that link to a given page                            |
+| `kb_status`           | Project overview — page count, source count, etc.                   |
 
 ### Add to Claude Code (session)
 
