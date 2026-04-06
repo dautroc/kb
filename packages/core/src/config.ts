@@ -87,8 +87,7 @@ export async function parseGlobalConfig(path?: string): Promise<GlobalConfig> {
   ) {
     const l = rawLlm as Record<string, unknown>;
     result.llm = {
-      ...(typeof l["provider"] === "string" &&
-      (VALID_PROVIDERS as readonly string[]).includes(l["provider"])
+      ...(typeof l["provider"] === "string"
         ? { provider: l["provider"] as KbConfig["llm"]["provider"] }
         : {}),
       ...(typeof l["model"] === "string" ? { model: l["model"] } : {}),
