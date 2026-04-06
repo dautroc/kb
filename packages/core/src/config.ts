@@ -224,11 +224,8 @@ export async function resolveConfig(
   projectDir: string,
   globalConfigPath?: string,
 ): Promise<KbConfig> {
-  const resolvedGlobalPath =
-    globalConfigPath ?? join(homedir(), ".kb", "config.toml");
-
   const [globalCfg, projectCfg] = await Promise.all([
-    parseGlobalConfig(resolvedGlobalPath),
+    parseGlobalConfig(globalConfigPath),
     parseProjectConfig(join(projectDir, ".kb", "config.toml")),
   ]);
 
