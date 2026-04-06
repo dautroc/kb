@@ -96,7 +96,7 @@ shared-glossary = { path = "../shared-glossary" }
   });
 
   it("accepts all valid provider enum values", async () => {
-    for (const provider of ["anthropic", "openai", "ollama"]) {
+    for (const provider of ["anthropic", "openai", "ollama", "zai"]) {
       const toml = `
 [project]
 name = "my-project"
