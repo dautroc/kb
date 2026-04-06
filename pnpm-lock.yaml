@@ -33,8 +33,8 @@ importers:
         specifier: workspace:*
         version: link:../core
       kb-mcp:
-        specifier: 0.1.3
-        version: 0.1.3(zod@4.3.6)
+        specifier: workspace:*
+        version: link:../mcp-server
     devDependencies:
       '@types/node':
         specifier: ^22.0.0
@@ -1218,12 +1218,6 @@ packages:
   json-schema-typed@8.0.2:
     resolution: {integrity: sha512-fQhoXdcvc3V28x7C7BMs4P5+kNlgUURe2jmUT1T//oBRMDrqy1QPelJimwZGo7Hg9VPV3EQV5Bnq4hbFy2vetA==}
 
-  kb-core@0.1.6:
-    resolution: {integrity: sha512-lLchumaq2H0myhjell4dzxUNeRg8JrZcncTnLDM/5k4rpHjzj8ardwfwpWp9E1uE0y+28czCbJkWsvizwWmjLw==}
-
-  kb-mcp@0.1.3:
-    resolution: {integrity: sha512-kFS79TXYvzVra3NFtPNtfWi2ngpmbJtNzuGmSFT6ajdiQZDTs75TYtVKtAz8HSL5+KYt4WyBEvL7jrJ62OJXVw==}
-
   kind-of@6.0.3:
     resolution: {integrity: sha512-dcS1ul+9tmeD95T+x28/ehLgd9mENa3LsvDTtzm3vyBEO7RPptvAD+t44WVXaUjTBRcrpFeFlC8WCruUR456hw==}
     engines: {node: '>=0.10.0'}
@@ -2304,14 +2298,6 @@ snapshots:
       chai: 5.3.3
       tinyrainbow: 1.2.0
 
-  '@vitest/mocker@2.1.9(vite@5.4.21(@types/node@22.19.17))':
-    dependencies:
-      '@vitest/spy': 2.1.9
-      estree-walker: 3.0.3
-      magic-string: 0.30.21
-    optionalDependencies:
-      vite: 5.4.21(@types/node@22.19.17)
-
   '@vitest/mocker@2.1.9(vite@5.4.21(@types/node@25.5.2))':
     dependencies:
       '@vitest/spy': 2.1.9
@@ -2866,30 +2852,6 @@ snapshots:
   json-schema-traverse@1.0.0: {}
 
   json-schema-typed@8.0.2: {}
-
-  kb-core@0.1.6:
-    dependencies:
-      '@anthropic-ai/sdk': 0.30.1
-      '@iarna/toml': 2.2.5
-      '@types/better-sqlite3': 7.6.13
-      better-sqlite3: 9.6.0
-      gray-matter: 4.0.3
-      remark: 15.0.1
-      remark-frontmatter: 5.0.0
-      remark-wiki-link: 2.0.1
-    transitivePeerDependencies:
-      - encoding
-      - supports-color
-
-  kb-mcp@0.1.3(zod@4.3.6):
-    dependencies:
-      '@modelcontextprotocol/sdk': 1.29.0(zod@4.3.6)
-      kb-core: 0.1.6
-    transitivePeerDependencies:
-      - '@cfworker/json-schema'
-      - encoding
-      - supports-color
-      - zod
 
   kind-of@6.0.3: {}
 
@@ -3709,7 +3671,7 @@ snapshots:
   vitest@2.1.9(@types/node@22.19.17):
     dependencies:
       '@vitest/expect': 2.1.9
-      '@vitest/mocker': 2.1.9(vite@5.4.21(@types/node@22.19.17))
+      '@vitest/mocker': 2.1.9(vite@5.4.21(@types/node@25.5.2))
       '@vitest/pretty-format': 2.1.9
       '@vitest/runner': 2.1.9
       '@vitest/snapshot': 2.1.9
