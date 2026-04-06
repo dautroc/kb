@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mkdtemp, rm, mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { resolveDependencies } from "./deps.js";
+import { resolveDependencies, updateGitDep } from "./deps.js";
 import { loadProject } from "./project.js";
 
 const baseConfig = (name: string, deps = "") => `
@@ -36,6 +36,42 @@ async function setupKbProject(
     "utf8",
   );
 }
+
+describe("updateGitDep", () => {
+  let tmpDir: string;
+
+  beforeEach(async () => {
+    tmpDir = await mkdtemp(join(tmpdir(), "kb-deps-test-"));
+  });
+
+  afterEach(async () => {
+    await rm(tmpDir, { recursive: true, force: true });
+  });
+
+  it("throws on depName containing a forward slash", async () => {
+    await setupKbProject(tmpDir, "main-project");
+    const project = await loadProject(tmpDir);
+    await expect(updateGitDep(project, "evil/dep")).rejects.toThrow(
+      /Invalid dependency name/,
+    );
+  });
+
+  it("throws on depName containing a backslash", async () => {
+    await setupKbProject(tmpDir, "main-project");
+    const project = await loadProject(tmpDir);
+    await expect(updateGitDep(project, "evil\\dep")).rejects.toThrow(
+      /Invalid dependency name/,
+    );
+  });
+
+  it("throws on depName containing double dot", async () => {
+    await setupKbProject(tmpDir, "main-project");
+    const project = await loadProject(tmpDir);
+    await expect(updateGitDep(project, "../escape")).rejects.toThrow(
+      /Invalid dependency name/,
+    );
+  });
+});
 
 describe("resolveDependencies", () => {
   let tmpDir: string;
