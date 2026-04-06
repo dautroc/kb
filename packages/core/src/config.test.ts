@@ -2,9 +2,15 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mkdtemp, rm, writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { parseConfig, parseGlobalConfig } from "./config.js";
+import {
+  parseConfig,
+  parseGlobalConfig,
+  parseProjectConfig,
+  mergeConfigs,
+  type KbConfig,
+} from "./config.js";
 
-describe("parseConfig", () => {
+describe("parseProjectConfig", () => {
   let tmpDir: string;
 
   beforeEach(async () => {
@@ -41,14 +47,14 @@ model = "claude-sonnet-4-20250514"
 
   it("parses a valid config.toml", async () => {
     const configPath = await writeConfig(validToml);
-    const config = await parseConfig(configPath);
+    const config = await parseProjectConfig(configPath);
 
-    expect(config.project.name).toBe("my-project");
-    expect(config.project.version).toBe("0.1.0");
-    expect(config.directories.sources).toBe("sources");
-    expect(config.directories.wiki).toBe("wiki");
-    expect(config.llm.provider).toBe("anthropic");
-    expect(config.llm.model).toBe("claude-sonnet-4-20250514");
+    expect(config.project?.name).toBe("my-project");
+    expect(config.project?.version).toBe("0.1.0");
+    expect(config.directories?.sources).toBe("sources");
+    expect(config.directories?.wiki).toBe("wiki");
+    expect(config.llm?.provider).toBe("anthropic");
+    expect(config.llm?.model).toBe("claude-sonnet-4-20250514");
     expect(config.dependencies).toEqual({});
   });
 
@@ -70,135 +76,24 @@ model = "gpt-4"
 shared-glossary = { path = "../shared-glossary" }
 `;
     const configPath = await writeConfig(toml);
-    const config = await parseConfig(configPath);
+    const config = await parseProjectConfig(configPath);
 
-    expect(config.llm.provider).toBe("openai");
-    expect(config.dependencies["shared-glossary"]).toEqual({
+    expect(config.llm?.provider).toBe("openai");
+    expect(config.dependencies?.["shared-glossary"]).toEqual({
       path: "../shared-glossary",
     });
   });
 
   it("throws when file not found", async () => {
     const missingPath = join(tmpDir, "nonexistent", "config.toml");
-    await expect(parseConfig(missingPath)).rejects.toThrow(
+    await expect(parseProjectConfig(missingPath)).rejects.toThrow(
       /not found|no such file/i,
     );
   });
 
   it("throws on invalid TOML", async () => {
     const configPath = await writeConfig("this is not valid toml ::::");
-    await expect(parseConfig(configPath)).rejects.toThrow();
-  });
-
-  it("throws when project.name is missing", async () => {
-    const toml = `
-[project]
-version = "0.1.0"
-
-[directories]
-sources = "sources"
-wiki = "wiki"
-
-[llm]
-provider = "anthropic"
-model = "claude-sonnet-4-20250514"
-`;
-    const configPath = await writeConfig(toml);
-    await expect(parseConfig(configPath)).rejects.toThrow(/project\.name/i);
-  });
-
-  it("throws when project.version is missing", async () => {
-    const toml = `
-[project]
-name = "my-project"
-
-[directories]
-sources = "sources"
-wiki = "wiki"
-
-[llm]
-provider = "anthropic"
-model = "claude-sonnet-4-20250514"
-`;
-    const configPath = await writeConfig(toml);
-    await expect(parseConfig(configPath)).rejects.toThrow(/project\.version/i);
-  });
-
-  it("throws when directories.sources is missing", async () => {
-    const toml = `
-[project]
-name = "my-project"
-version = "0.1.0"
-
-[directories]
-wiki = "wiki"
-
-[llm]
-provider = "anthropic"
-model = "claude-sonnet-4-20250514"
-`;
-    const configPath = await writeConfig(toml);
-    await expect(parseConfig(configPath)).rejects.toThrow(
-      /directories\.sources/i,
-    );
-  });
-
-  it("throws when llm.provider is an invalid value", async () => {
-    const toml = `
-[project]
-name = "my-project"
-version = "0.1.0"
-
-[directories]
-sources = "sources"
-wiki = "wiki"
-
-[llm]
-provider = "grok"
-model = "grok-1"
-`;
-    const configPath = await writeConfig(toml);
-    await expect(parseConfig(configPath)).rejects.toThrow(/provider/i);
-  });
-
-  it("throws when directories.sources is an absolute path", async () => {
-    const toml = `
-[project]
-name = "my-project"
-version = "0.1.0"
-
-[directories]
-sources = "/etc/passwd"
-wiki = "wiki"
-
-[llm]
-provider = "anthropic"
-model = "claude-sonnet-4-20250514"
-`;
-    const configPath = await writeConfig(toml);
-    await expect(parseConfig(configPath)).rejects.toThrow(
-      /directories\.sources must be a safe relative path/i,
-    );
-  });
-
-  it("throws when directories.wiki contains .. traversal", async () => {
-    const toml = `
-[project]
-name = "my-project"
-version = "0.1.0"
-
-[directories]
-sources = "sources"
-wiki = "../../wiki"
-
-[llm]
-provider = "anthropic"
-model = "claude-sonnet-4-20250514"
-`;
-    const configPath = await writeConfig(toml);
-    await expect(parseConfig(configPath)).rejects.toThrow(
-      /directories\.wiki must be a safe relative path/i,
-    );
+    await expect(parseProjectConfig(configPath)).rejects.toThrow();
   });
 
   it("accepts all valid provider enum values", async () => {
@@ -217,8 +112,8 @@ provider = "${provider}"
 model = "some-model"
 `;
       const configPath = await writeConfig(toml);
-      const config = await parseConfig(configPath);
-      expect(config.llm.provider).toBe(provider);
+      const config = await parseProjectConfig(configPath);
+      expect(config.llm?.provider).toBe(provider);
     }
   });
 });
@@ -272,5 +167,207 @@ describe("parseGlobalConfig", () => {
     expect(result.llm?.provider).toBe("anthropic");
     expect(result.directories?.sources).toBe("src");
     expect(result.directories?.wiki).toBe("docs");
+  });
+});
+
+describe("mergeConfigs", () => {
+  it("global-only fields survive when project has none", () => {
+    const global = {
+      project: { name: "global-proj", version: "1.0.0" },
+      directories: { sources: "src", wiki: "docs" },
+      llm: { provider: "openai" as const, model: "gpt-4o" },
+      dependencies: {},
+    };
+    const result = mergeConfigs(global, {});
+    expect(result.llm.provider).toBe("openai");
+    expect(result.llm.model).toBe("gpt-4o");
+    expect(result.directories.sources).toBe("src");
+  });
+
+  it("project fields win over global fields", () => {
+    const global = {
+      llm: { provider: "openai" as const, model: "gpt-4o" },
+    };
+    const project = {
+      project: { name: "my-proj", version: "0.1.0" },
+      directories: { sources: "sources", wiki: "wiki" },
+      llm: {
+        provider: "anthropic" as const,
+        model: "claude-sonnet-4-20250514",
+      },
+      dependencies: {},
+    };
+    const result = mergeConfigs(global, project);
+    expect(result.llm.provider).toBe("anthropic");
+    expect(result.llm.model).toBe("claude-sonnet-4-20250514");
+  });
+
+  it("project partially overrides global llm — only set fields win", () => {
+    const global = {
+      project: { name: "g", version: "0.1.0" },
+      directories: { sources: "sources", wiki: "wiki" },
+      llm: { provider: "openai" as const, model: "gpt-4o" },
+      dependencies: {},
+    };
+    const project = {
+      llm: { model: "gpt-4-turbo" },
+    };
+    const result = mergeConfigs(global, project);
+    expect(result.llm.provider).toBe("openai");
+    expect(result.llm.model).toBe("gpt-4-turbo");
+  });
+
+  it("dependencies are unioned — project keys win on collision", () => {
+    const global = {
+      project: { name: "p", version: "0.1.0" },
+      directories: { sources: "sources", wiki: "wiki" },
+      llm: {
+        provider: "anthropic" as const,
+        model: "claude-sonnet-4-20250514",
+      },
+      dependencies: {
+        "shared-glossary": { path: "../shared-glossary" },
+        "shared-lib": { path: "../shared-lib" },
+      },
+    };
+    const project = {
+      dependencies: {
+        "shared-glossary": { path: "../project-glossary" },
+      },
+    };
+    const result = mergeConfigs(global, project);
+    expect(result.dependencies["shared-glossary"]).toEqual({
+      path: "../project-glossary",
+    });
+    expect(result.dependencies["shared-lib"]).toEqual({
+      path: "../shared-lib",
+    });
+  });
+
+  it("throws when project.name is missing from both", () => {
+    const project = {
+      project: { version: "0.1.0" },
+      directories: { sources: "sources", wiki: "wiki" },
+      llm: {
+        provider: "anthropic" as const,
+        model: "claude-sonnet-4-20250514",
+      },
+    };
+    expect(() => mergeConfigs({}, project)).toThrow(/project\.name/i);
+  });
+
+  it("throws when project.version is missing from both", () => {
+    const project = {
+      project: { name: "p" },
+      directories: { sources: "sources", wiki: "wiki" },
+      llm: {
+        provider: "anthropic" as const,
+        model: "claude-sonnet-4-20250514",
+      },
+    };
+    expect(() => mergeConfigs({}, project)).toThrow(/project\.version/i);
+  });
+
+  it("throws when directories.sources is missing from both", () => {
+    const project = {
+      project: { name: "p", version: "0.1.0" },
+      directories: { wiki: "wiki" },
+      llm: {
+        provider: "anthropic" as const,
+        model: "claude-sonnet-4-20250514",
+      },
+    };
+    expect(() => mergeConfigs({}, project)).toThrow(/directories\.sources/i);
+  });
+
+  it("throws when llm.provider is invalid", () => {
+    const project = {
+      project: { name: "p", version: "0.1.0" },
+      directories: { sources: "sources", wiki: "wiki" },
+      llm: { provider: "grok" as KbConfig["llm"]["provider"], model: "grok-1" },
+    };
+    expect(() => mergeConfigs({}, project)).toThrow(/provider/i);
+  });
+
+  it("throws when directories.sources is an absolute path", () => {
+    const project = {
+      project: { name: "p", version: "0.1.0" },
+      directories: { sources: "/etc/passwd", wiki: "wiki" },
+      llm: {
+        provider: "anthropic" as const,
+        model: "claude-sonnet-4-20250514",
+      },
+    };
+    expect(() => mergeConfigs({}, project)).toThrow(
+      /directories\.sources must be a safe relative path/i,
+    );
+  });
+
+  it("throws when directories.wiki contains .. traversal", () => {
+    const project = {
+      project: { name: "p", version: "0.1.0" },
+      directories: { sources: "sources", wiki: "../../wiki" },
+      llm: {
+        provider: "anthropic" as const,
+        model: "claude-sonnet-4-20250514",
+      },
+    };
+    expect(() => mergeConfigs({}, project)).toThrow(
+      /directories\.wiki must be a safe relative path/i,
+    );
+  });
+
+  it("throws with helpful message mentioning both config locations", () => {
+    expect(() => mergeConfigs({}, {})).toThrow(
+      /~\/.kb\/config\.toml.*\.kb\/config\.toml|\.kb\/config\.toml.*~\/.kb\/config\.toml/i,
+    );
+  });
+});
+
+describe("parseConfig (deprecated alias)", () => {
+  let tmpDir: string;
+
+  beforeEach(async () => {
+    tmpDir = await mkdtemp(join(tmpdir(), "kb-config-test-"));
+  });
+
+  afterEach(async () => {
+    await rm(tmpDir, { recursive: true, force: true });
+  });
+
+  async function writeConfig(content: string): Promise<string> {
+    const kbDir = join(tmpDir, ".kb");
+    await mkdir(kbDir, { recursive: true });
+    const configPath = join(kbDir, "config.toml");
+    await writeFile(configPath, content, "utf8");
+    return configPath;
+  }
+
+  it("parses a valid config.toml and returns KbConfig", async () => {
+    const toml = `
+[project]
+name = "my-project"
+version = "0.1.0"
+
+[directories]
+sources = "sources"
+wiki = "wiki"
+
+[llm]
+provider = "anthropic"
+model = "claude-sonnet-4-20250514"
+
+[dependencies]
+`;
+    const configPath = await writeConfig(toml);
+    const config = await parseConfig(configPath);
+
+    expect(config.project.name).toBe("my-project");
+    expect(config.project.version).toBe("0.1.0");
+    expect(config.directories.sources).toBe("sources");
+    expect(config.directories.wiki).toBe("wiki");
+    expect(config.llm.provider).toBe("anthropic");
+    expect(config.llm.model).toBe("claude-sonnet-4-20250514");
+    expect(config.dependencies).toEqual({});
   });
 });
