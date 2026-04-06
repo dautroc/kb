@@ -12,6 +12,7 @@ import { makeLintCommand } from "./commands/lint.js";
 import { makeMcpCommand } from "./commands/mcp.js";
 import { makeAgentContextCommand } from "./commands/agent-context.js";
 import { makeDepsCommand } from "./commands/deps.js";
+import { makeWorkspaceCommand } from "./commands/workspace.js";
 
 const require = createRequire(import.meta.url);
 const { version } = require("../package.json") as { version: string };
@@ -34,5 +35,6 @@ program.addCommand(makeLintCommand());
 program.addCommand(makeMcpCommand());
 program.addCommand(makeAgentContextCommand());
 program.addCommand(makeDepsCommand());
+program.addCommand(makeWorkspaceCommand());
 
 program.parse(process.argv);
