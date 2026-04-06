@@ -1,6 +1,11 @@
 import { readFile } from "node:fs/promises";
 import matter from "gray-matter";
 
+export interface CrossLink {
+  project: string;
+  path: string;
+}
+
 export interface ParsedPage {
   path: string;
   title: string;
@@ -8,10 +13,14 @@ export interface ParsedPage {
   tags: string;
   frontmatter: Record<string, unknown>;
   outgoingLinks: string[];
+  outgoingCrossLinks: CrossLink[];
   wordCount: number;
 }
 
-const WIKILINK_RE = /\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/g;
+// Matches [[kb://project-name/path/to/page]] and [[kb://project-name/path/to/page|display]]
+const CROSS_LINK_RE = /\[\[kb:\/\/([^/\]]+)\/([^\]|]+?)(?:\|[^\]]+)?\]\]/g;
+// Matches [[page-name]] and [[page-name|display]] — excludes kb:// prefixed links
+const WIKILINK_RE = /\[\[(?!kb:\/\/)([^\]|]+?)(?:\|[^\]]+)?\]\]/g;
 const H1_RE = /^#\s+(.+)$/m;
 
 function extractTitle(
@@ -26,7 +35,6 @@ function extractTitle(
   if (h1Match) {
     return h1Match[1]!.trim();
   }
-  // Fallback: use filename without extension
   const filename = relativePath.split("/").pop() ?? relativePath;
   return filename.replace(/\.md$/i, "");
 }
@@ -43,6 +51,16 @@ function extractWikiLinks(content: string): string[] {
   const re = new RegExp(WIKILINK_RE.source, "g");
   while ((match = re.exec(content)) !== null) {
     links.push(match[1]!.trim());
+  }
+  return links;
+}
+
+function extractCrossLinks(content: string): CrossLink[] {
+  const links: CrossLink[] = [];
+  let match: RegExpExecArray | null;
+  const re = new RegExp(CROSS_LINK_RE.source, "g");
+  while ((match = re.exec(content)) !== null) {
+    links.push({ project: match[1]!.trim(), path: match[2]!.trim() });
   }
   return links;
 }
@@ -66,6 +84,7 @@ export async function parsePage(
   const title = extractTitle(fm, content, relativePath);
   const tags = extractTags(fm);
   const outgoingLinks = extractWikiLinks(content);
+  const outgoingCrossLinks = extractCrossLinks(content);
   const wordCount = countWords(content);
 
   return {
@@ -75,6 +94,7 @@ export async function parsePage(
     tags,
     frontmatter: fm,
     outgoingLinks,
+    outgoingCrossLinks,
     wordCount,
   };
 }

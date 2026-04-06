@@ -141,4 +141,34 @@ Content.
     expect(createdStr).toBe("2026-01-01");
     expect(page.frontmatter["custom"]).toBe("value");
   });
+
+  it("extracts cross-project kb:// links into outgoingCrossLinks", async () => {
+    const filePath = join(tmpDir, "page.md");
+    await writeFile(
+      filePath,
+      `# Test Page\n\nSee [[kb://shared-glossary/wiki/terms/api-gateway]] for details.\nAlso [[kb://company-standards/wiki/auth|Auth Standards]].\nAnd a regular link [[local-page]].\n`,
+      "utf8",
+    );
+    const page = await parsePage(filePath, "wiki/page.md");
+    expect(page.outgoingCrossLinks).toHaveLength(2);
+    expect(page.outgoingCrossLinks[0]).toEqual({
+      project: "shared-glossary",
+      path: "wiki/terms/api-gateway",
+    });
+    expect(page.outgoingCrossLinks[1]).toEqual({
+      project: "company-standards",
+      path: "wiki/auth",
+    });
+  });
+
+  it("does not include kb:// links in outgoingLinks", async () => {
+    const filePath = join(tmpDir, "page.md");
+    await writeFile(
+      filePath,
+      `# Test Page\n\n[[kb://shared-glossary/wiki/foo]]\n[[regular-link]]\n`,
+      "utf8",
+    );
+    const page = await parsePage(filePath, "wiki/page.md");
+    expect(page.outgoingLinks).toEqual(["regular-link"]);
+  });
 });

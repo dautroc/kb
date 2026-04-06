@@ -23,11 +23,25 @@ CREATE TABLE IF NOT EXISTS page_meta (
 );
 `;
 
+function migrateDb(db: Database.Database): void {
+  const columns = db
+    .prepare<[], { name: string }>("PRAGMA table_info(page_meta)")
+    .all()
+    .map((c) => c.name);
+
+  if (!columns.includes("outgoing_cross_links")) {
+    db.exec(
+      "ALTER TABLE page_meta ADD COLUMN outgoing_cross_links TEXT NOT NULL DEFAULT '[]'",
+    );
+  }
+}
+
 export function openDb(project: Project): Database.Database {
   const dbPath = join(project.kbDir, "index.db");
   const db = new Database(dbPath);
   db.pragma("journal_mode = WAL");
   db.exec(SCHEMA_SQL);
+  migrateDb(db);
   return db;
 }
 
