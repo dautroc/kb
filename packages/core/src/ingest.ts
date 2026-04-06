@@ -238,11 +238,13 @@ export async function ingestSource(
           return `- ${name}:\n${indexContent}`;
         }),
       );
-      const depNames = project.dependencies.map((d) => d.name).join(", ");
+      const depLinkExamples = project.dependencies
+        .map((d) => `[[kb://${d.name}/path/to/page]]`)
+        .join(", ");
       depContext =
         `\n\n## Related Knowledge Bases\n` +
         depIndexes.join("\n\n") +
-        `\n\nYou may reference these via [[kb://${depNames}/path/to/page]] links in generated content. ` +
+        `\n\nYou may reference these via cross-project links (e.g. ${depLinkExamples}) in generated content. ` +
         `You must NOT propose updates to dependency wiki pages.`;
     }
   }
