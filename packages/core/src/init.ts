@@ -303,7 +303,8 @@ export async function initProject(options: InitOptions): Promise<void> {
   }
 
   // Ensure global config exists; create with defaults if not
-  if (!(await globalConfigExists(globalConfigPath))) {
+  const createdGlobal = !(await globalConfigExists(globalConfigPath));
+  if (createdGlobal) {
     await mkdir(join(globalConfigPath, ".."), { recursive: true });
     await writeFile(globalConfigPath, buildGlobalConfigToml(), "utf8");
   }
@@ -341,6 +342,9 @@ export async function initProject(options: InitOptions): Promise<void> {
     ]);
   } catch (error) {
     await rm(join(directory, ".kb"), { recursive: true, force: true });
+    if (createdGlobal) {
+      await rm(globalConfigPath, { force: true });
+    }
     throw error;
   }
 }
