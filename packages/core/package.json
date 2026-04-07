@@ -1,6 +1,6 @@
 {
   "name": "kb-core",
-  "version": "0.1.7",
+  "version": "0.1.6",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -8,7 +8,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsup && tsc --declaration --emitDeclarationOnly --skipLibCheck --outDir dist --project tsconfig.json",
+    "build": "tsup && tsc --declaration --emitDeclarationOnly --outDir dist --project tsconfig.json",
     "dev": "tsup --watch",
     "test": "vitest run"
   },
@@ -17,13 +17,10 @@
     "@iarna/toml": "^2.2.5",
     "@types/better-sqlite3": "^7.6.0",
     "better-sqlite3": "^9.0.0",
-    "fast-glob": "^3.3.3",
     "gray-matter": "^4.0.3",
-    "pdf-parse": "^1.1.4",
     "remark": "^15.0.0",
     "remark-frontmatter": "^5.0.0",
-    "remark-wiki-link": "^2.0.0",
-    "sqlite-vec": "^0.1.9"
+    "remark-wiki-link": "^2.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
