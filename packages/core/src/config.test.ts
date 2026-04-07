@@ -7,6 +7,7 @@ import {
   parseProjectConfig,
   mergeConfigs,
   resolveConfig,
+  parseConfig,
   type KbConfig,
 } from "./config.js";
 
@@ -321,6 +322,79 @@ describe("mergeConfigs", () => {
     expect(() => mergeConfigs({}, {})).toThrow(
       /~\/.kb\/config\.toml.*\.kb\/config\.toml|\.kb\/config\.toml.*~\/.kb\/config\.toml/i,
     );
+  });
+});
+
+describe("[search] config section", () => {
+  let tmpDir: string;
+
+  beforeEach(async () => {
+    tmpDir = await mkdtemp(join(tmpdir(), "kb-search-config-test-"));
+  });
+
+  afterEach(async () => {
+    await rm(tmpDir, { recursive: true, force: true });
+  });
+
+  async function writeProjectConfig(content: string): Promise<string> {
+    const kbDir = join(tmpDir, ".kb");
+    await mkdir(kbDir, { recursive: true });
+    const configPath = join(kbDir, "config.toml");
+    await writeFile(configPath, content, "utf8");
+    return configPath;
+  }
+
+  it("applies defaults when [search] is absent", async () => {
+    const configPath = await writeProjectConfig(
+      `
+[project]
+name = "test"
+version = "0.1.0"
+
+[directories]
+sources = "sources"
+wiki = "wiki"
+
+[llm]
+provider = "anthropic"
+model = "claude-sonnet-4-20250514"
+`.trim(),
+    );
+    const config = await parseConfig(configPath);
+    expect(config.search).toEqual({
+      embedding_provider: "ollama",
+      embedding_model: "nomic-embed-text",
+      ollama_url: "http://localhost:11434",
+      chunk_size: 900,
+    });
+  });
+
+  it("parses explicit [search] values from TOML", async () => {
+    const configPath = await writeProjectConfig(
+      `
+[project]
+name = "test"
+version = "0.1.0"
+
+[directories]
+sources = "sources"
+wiki = "wiki"
+
+[llm]
+provider = "anthropic"
+model = "claude-sonnet-4-20250514"
+
+[search]
+embedding_provider = "ollama"
+embedding_model = "mxbai-embed-large"
+ollama_url = "http://remote:11434"
+chunk_size = 500
+`.trim(),
+    );
+    const config = await parseConfig(configPath);
+    expect(config.search.embedding_model).toBe("mxbai-embed-large");
+    expect(config.search.ollama_url).toBe("http://remote:11434");
+    expect(config.search.chunk_size).toBe(500);
   });
 });
 

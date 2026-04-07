@@ -3,6 +3,13 @@ import { join, normalize } from "node:path";
 import { homedir } from "node:os";
 import TOML from "@iarna/toml";
 
+export interface SearchConfig {
+  embedding_provider: "ollama";
+  embedding_model: string;
+  ollama_url: string;
+  chunk_size: number;
+}
+
 export interface KbConfig {
   project: {
     name: string;
@@ -16,6 +23,7 @@ export interface KbConfig {
     provider: "anthropic" | "openai" | "ollama" | "zai";
     model: string;
   };
+  search: SearchConfig;
   dependencies: Record<
     string,
     { path?: string; git?: string; branch?: string; mode?: string }
@@ -26,6 +34,7 @@ export type GlobalConfig = {
   project?: { name?: string; version?: string };
   directories?: { sources?: string; wiki?: string };
   llm?: { provider?: KbConfig["llm"]["provider"]; model?: string };
+  search?: SearchConfig;
   dependencies?: KbConfig["dependencies"];
 };
 
@@ -72,6 +81,21 @@ function parseTomlFields(parsed: Record<string, unknown>): GlobalConfig {
         ? { provider: l["provider"] as KbConfig["llm"]["provider"] }
         : {}),
       ...(typeof l["model"] === "string" ? { model: l["model"] } : {}),
+    };
+  }
+
+  const rawSearch = parsed["search"];
+  if (
+    rawSearch !== undefined &&
+    typeof rawSearch === "object" &&
+    !Array.isArray(rawSearch)
+  ) {
+    const s = rawSearch as Record<string, unknown>;
+    result.search = {
+      embedding_provider: (s["embedding_provider"] as "ollama") ?? "ollama",
+      embedding_model: (s["embedding_model"] as string) ?? "nomic-embed-text",
+      ollama_url: (s["ollama_url"] as string) ?? "http://localhost:11434",
+      chunk_size: (s["chunk_size"] as number) ?? 900,
     };
   }
 
@@ -159,6 +183,7 @@ export function mergeConfigs(
   const projectSection = { ...global.project, ...project.project };
   const directories = { ...global.directories, ...project.directories };
   const llm = { ...global.llm, ...project.llm };
+  const search = project.search ?? global.search;
   const dependencies = { ...global.dependencies, ...project.dependencies };
 
   const hint = " — set it in ~/.kb/config.toml or .kb/config.toml";
@@ -209,6 +234,12 @@ export function mergeConfigs(
     llm: {
       provider: llm.provider as KbConfig["llm"]["provider"],
       model: llm.model,
+    },
+    search: search ?? {
+      embedding_provider: "ollama",
+      embedding_model: "nomic-embed-text",
+      ollama_url: "http://localhost:11434",
+      chunk_size: 900,
     },
     dependencies: dependencies ?? {},
   };
