@@ -30,8 +30,11 @@ function printResults(
     return;
   }
 
+  const modeBadge =
+    results[0]?.searchMode === "hybrid" ? chalk.cyan(" [hybrid]") : "";
+
   console.log(
-    `\nFound ${results.length} result${results.length !== 1 ? "s" : ""} for "${query}":\n`,
+    `\nFound ${results.length} result${results.length !== 1 ? "s" : ""} for "${query}"${modeBadge}:\n`,
   );
 
   for (let i = 0; i < results.length; i++) {
@@ -215,7 +218,10 @@ export function makeSearchCommand(): Command {
           const db = openDb(project);
           let results: SearchResult[];
           try {
-            results = await searchWiki(db, query, project.name, searchOptions);
+            results = await searchWiki(db, query, project.name, {
+              ...searchOptions,
+              searchConfig: project.config.search,
+            });
           } finally {
             closeDb(db);
           }
