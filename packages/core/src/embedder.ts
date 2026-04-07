@@ -150,7 +150,7 @@ async function callOllamaEmbed(
     });
   } catch (err: unknown) {
     throw new OllamaUnavailableError(
-      `Ollama unreachable: ${(err as Error).message}`,
+      `Ollama unreachable: ${err instanceof Error ? err.message : String(err)}`,
     );
   }
   if (!response.ok) {
@@ -178,7 +178,8 @@ export async function embedProject(
   const db = openDb(project);
   try {
     if (options?.rebuild) {
-      db.exec("DELETE FROM chunks; DELETE FROM chunks_vec;");
+      // Delete chunks_vec first (rowids reference chunks.id)
+      db.exec("DELETE FROM chunks_vec; DELETE FROM chunks;");
     }
 
     // Collect all wiki markdown files
@@ -268,6 +269,11 @@ export async function embedProject(
         continue;
       }
 
+      if (embeddings.length !== chunks.length) {
+        throw new Error(
+          `Ollama returned ${embeddings.length} embeddings for ${chunks.length} chunks.`,
+        );
+      }
       if (embeddings[0]?.length !== 768) {
         throw new Error(
           `Model returned ${embeddings[0]?.length ?? 0}-dim vectors, expected 768. Update embedding_model.`,
