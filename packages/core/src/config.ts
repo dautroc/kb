@@ -92,10 +92,19 @@ function parseTomlFields(parsed: Record<string, unknown>): GlobalConfig {
   ) {
     const s = rawSearch as Record<string, unknown>;
     result.search = {
-      embedding_provider: (s["embedding_provider"] as "ollama") ?? "ollama",
-      embedding_model: (s["embedding_model"] as string) ?? "nomic-embed-text",
-      ollama_url: (s["ollama_url"] as string) ?? "http://localhost:11434",
-      chunk_size: (s["chunk_size"] as number) ?? 900,
+      embedding_provider:
+        typeof s["embedding_provider"] === "string"
+          ? (s["embedding_provider"] as "ollama")
+          : "ollama",
+      embedding_model:
+        typeof s["embedding_model"] === "string"
+          ? s["embedding_model"]
+          : "nomic-embed-text",
+      ollama_url:
+        typeof s["ollama_url"] === "string"
+          ? s["ollama_url"]
+          : "http://localhost:11434",
+      chunk_size: typeof s["chunk_size"] === "number" ? s["chunk_size"] : 900,
     };
   }
 
