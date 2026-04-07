@@ -1,7 +1,11 @@
 .worktrees/
 node_modules/
 dist/
-.kb/index.db
+# kb project files (created by running kb init in repo root)
+.kb/
+wiki/
+sources/
+log.md
 *.tsbuildinfo
 .DS_Store
 # Compiled output that may leak into src/ from tsc
