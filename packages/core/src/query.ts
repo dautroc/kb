@@ -55,7 +55,7 @@ export async function queryWiki(
   const db = openDb(project);
   let searchResults;
   try {
-    searchResults = searchWiki(db, question, project.name, { limit: 10 });
+    searchResults = await searchWiki(db, question, project.name, { limit: 10 });
   } finally {
     closeDb(db);
   }

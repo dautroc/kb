@@ -57,7 +57,7 @@ describe("full pipeline: init → index → search → lint", () => {
 
     const db = openDb(project);
     try {
-      const results = searchWiki(db, "authentication JWT", project.name);
+      const results = await searchWiki(db, "authentication JWT", project.name);
       expect(results.length).toBeGreaterThan(0);
       expect(results[0]!.title).toBe("Authentication Overview");
       expect(results[0]!.tags).toContain("security");
@@ -127,7 +127,7 @@ describe("full pipeline: init → index → search → lint", () => {
 
     const db = openDb(project);
     try {
-      const results = searchWiki(db, "anything", project.name);
+      const results = await searchWiki(db, "anything", project.name);
       expect(results).toHaveLength(0);
     } finally {
       closeDb(db);

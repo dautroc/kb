@@ -56,7 +56,7 @@ async function toolSearch(
   const db = openDb(project);
   let results;
   try {
-    results = searchWiki(db, query, project.name, { limit, tags });
+    results = await searchWiki(db, query, project.name, { limit, tags });
   } finally {
     closeDb(db);
   }
@@ -293,7 +293,7 @@ async function toolSearchWorkspace(
   const dbs = ws.members.map((m) => openDb(m));
   let results: SearchResult[];
   try {
-    results = searchAcrossProjects(
+    results = await searchAcrossProjects(
       ws.members.map((m, i) => ({
         db: dbs[i]!,
         projectName: m.name,
