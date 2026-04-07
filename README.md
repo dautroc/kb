@@ -54,6 +54,8 @@ kb lint
 | `kb mcp`                                                                                 | Start an MCP server (stdio) for agent integration                |
 | `kb agent-context [--write]`                                                             | Generate a CLAUDE.md / AGENTS.md integration block               |
 
+> For detailed per-command reference, configuration options, best practices, and troubleshooting see **[docs/usage-guide.md](docs/usage-guide.md)**.
+
 ## Multi-Project Workspaces
 
 `kb` supports declaring dependencies on other kb projects and searching/linking across them.
@@ -109,22 +111,6 @@ kb deps update       # git pull --ff-only for all git-backed deps
 
 ---
 
-## Project Structure
-
-Running `kb init` creates:
-
-```
-my-project/
-├── .kb/
-│   ├── config.toml       # Project configuration
-│   ├── schema.md         # LLM instructions and wiki conventions
-│   └── index.db          # SQLite FTS5 search index (auto-generated)
-├── sources/              # Raw, immutable source materials
-├── wiki/
-│   └── _index.md         # Wiki root
-└── log.md                # Append-only activity log
-```
-
 ## Configuration
 
 `.kb/config.toml`:
@@ -167,60 +153,6 @@ export ZAI_API_KEY="your-zai-api-key"
 ```
 
 Z.AI uses an OpenAI-compatible chat completions API (`https://api.z.ai/api/paas/v4/chat/completions`).
-
-## Ingest
-
-`kb ingest` is dry-run by default — it shows what _would_ change without writing anything:
-
-```bash
-kb ingest paper.pdf
-# Dry run — use --apply to write changes
-#
-# Source: paper.pdf → sources/paper.pdf
-#
-# Would create:
-#   + wiki/sources/paper-summary.md
-#   + wiki/concepts/new-concept.md
-#
-# Would update:
-#   ~ wiki/overview.md
-#
-# Run with --apply to write these changes.
-
-kb ingest paper.pdf --apply   # write changes
-kb ingest sources/ --batch    # process all files in a directory
-```
-
-Supported source formats: Markdown, plain text, PDF, URLs.
-
-## Search
-
-```bash
-kb search "authentication flow"
-kb search "auth" --limit 5
-kb search "auth" --tags security,api
-kb search "auth" --json          # machine-readable output
-```
-
-## Query
-
-```bash
-kb query "What are the tradeoffs between REST and GraphQL?"
-kb query "Summarize the auth system" --save wiki/summaries/auth.md
-```
-
-The `--save` flag writes the answer back into the wiki so knowledge compounds over time.
-
-## Lint
-
-```bash
-kb lint
-# ⚠  wiki/concepts/cqrs.md — Orphan page (no inbound links) [ORPHAN_PAGE]
-# ⚠  wiki/architecture/overview.md → [[event-sourcing]] not found [BROKEN_LINK]
-# ⚠  wiki/sources/q1-report-summary.md — Source updated after summary [STALE_SUMMARY]
-# ℹ  wiki/concepts/stub.md — Stub page (no links, < 50 words) [STUB_PAGE]
-# ℹ  wiki/concepts/api-gateway.md — Not in _index.md [MISSING_INDEX]
-```
 
 ## MCP Integration
 

@@ -11,15 +11,26 @@
 3. [Project Structure](#project-structure)
 4. [Configuration](#configuration)
 5. [Commands](#commands)
-6. [MCP Server (Agent Integration)](#mcp-server-agent-integration)
-7. [Best Practices](#best-practices)
-8. [Troubleshooting](#troubleshooting)
+6. [Multi-Project Workspaces](#multi-project-workspaces)
+7. [MCP Server (Agent Integration)](#mcp-server-agent-integration)
+8. [Best Practices](#best-practices)
+9. [Troubleshooting](#troubleshooting)
 
 ---
 
 ## Installation
 
-Build and install from source:
+```bash
+npm install -g kb-tool
+```
+
+Or run without installing:
+
+```bash
+npx kb-tool init
+```
+
+**Build from source:**
 
 ```bash
 git clone <repo-url>
@@ -319,26 +330,106 @@ kb agent-context --write  # appends to CLAUDE.md in the project root
 
 ---
 
+## Multi-Project Workspaces
+
+`kb` supports declaring dependencies on other kb projects and searching or linking across them.
+
+### Declaring dependencies
+
+In `.kb/config.toml`:
+
+```toml
+[dependencies]
+shared-glossary = { path = "../shared-glossary" }
+company-standards = { git = "https://github.com/org/standards.git", branch = "main" }
+design-system = { path = "../design-system", mode = "readonly" }
+```
+
+### Cross-project links
+
+Reference pages in dependency projects using the `[[kb://dep-name/path]]` syntax:
+
+```markdown
+See [[kb://shared-glossary/wiki/concepts/api-gateway]] for details.
+See [[kb://shared-glossary/wiki/concepts/api-gateway|API Gateway]] for a named link.
+```
+
+`kb lint` reports `UNDECLARED_CROSS_LINK` (error) for unknown dep names and `UNRESOLVABLE_CROSS_LINK` (warning) for missing target pages.
+
+### Cross-project search
+
+```bash
+kb search "auth" --deps                        # current project + all declared deps
+kb search "auth" --project shared-glossary     # single dep only
+kb search "auth" --workspace                   # all projects in .kbworkspace.toml
+```
+
+### Workspace manifest
+
+```bash
+kb workspace init --members "projects/*,shared/*"
+```
+
+Creates `.kbworkspace.toml` at the current directory:
+
+```toml
+[workspace]
+members = ["projects/*", "shared/*"]
+```
+
+### Dependency commands
+
+```bash
+kb deps             # show resolved dependency tree with modes
+kb deps update      # git pull --ff-only for all git-backed deps
+```
+
+---
+
 ## MCP Server (Agent Integration)
 
 `kb mcp` exposes the wiki to any MCP-compatible LLM agent (Claude Code, Cursor, etc.).
 
-### Setup with Claude Code
+### Setup with Claude Code (session)
 
-Add to your `claude_desktop_config.json` or `.mcp.json`:
+```bash
+claude mcp add kb -- kb mcp
+```
+
+Or via npx if not installed globally:
+
+```bash
+claude mcp add kb -- npx kb-tool mcp
+```
+
+The server must be started from the directory containing `.kb/config.toml`. If your knowledge base is in a subdirectory:
+
+```bash
+claude mcp add kb -- sh -c "cd /path/to/kb-project && kb mcp"
+```
+
+### Setup with Claude Desktop (`claude_desktop_config.json`)
 
 ```json
 {
   "mcpServers": {
     "kb": {
       "command": "kb",
-      "args": ["mcp"]
+      "args": ["mcp"],
+      "cwd": "/path/to/your/kb-project",
+      "env": {
+        "ANTHROPIC_API_KEY": "your-key-here"
+      }
     }
   }
 }
 ```
 
-Or run `kb agent-context --write` to append instructions to your `CLAUDE.md` automatically.
+### Generate a CLAUDE.md integration block
+
+```bash
+kb agent-context --write   # appends to CLAUDE.md in project root
+```
 
 ### Available MCP Tools
 
