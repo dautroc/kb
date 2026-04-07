@@ -30,8 +30,11 @@ function printResults(
     return;
   }
 
+  const modeBadge =
+    results[0]?.searchMode === "hybrid" ? chalk.cyan(" [hybrid]") : "";
+
   console.log(
-    `\nFound ${results.length} result${results.length !== 1 ? "s" : ""} for "${query}":\n`,
+    `\nFound ${results.length} result${results.length !== 1 ? "s" : ""} for "${query}"${modeBadge}:\n`,
   );
 
   for (let i = 0; i < results.length; i++) {
@@ -113,7 +116,7 @@ export function makeSearchCommand(): Command {
             const dbs = ws.members.map((m) => openDb(m));
             let results: SearchResult[];
             try {
-              results = searchAcrossProjects(
+              results = await searchAcrossProjects(
                 ws.members.map((m, i) => ({
                   db: dbs[i]!,
                   projectName: m.name,
@@ -168,11 +171,8 @@ export function makeSearchCommand(): Command {
             const db = openDb(dep.project);
             let results: SearchResult[];
             try {
-              results = searchWiki(
-                db,
-                query,
-                dep.project.name,
-                searchOptions,
+              results = (
+                await searchWiki(db, query, dep.project.name, searchOptions)
               ).map((r) => ({
                 ...r,
                 path: `${dep.name}: ${r.path}`,
@@ -202,7 +202,11 @@ export function makeSearchCommand(): Command {
             ];
             let results: SearchResult[];
             try {
-              results = searchAcrossProjects(targets, query, searchOptions);
+              results = await searchAcrossProjects(
+                targets,
+                query,
+                searchOptions,
+              );
             } finally {
               for (const { db } of targets) closeDb(db);
             }
@@ -214,7 +218,10 @@ export function makeSearchCommand(): Command {
           const db = openDb(project);
           let results: SearchResult[];
           try {
-            results = searchWiki(db, query, project.name, searchOptions);
+            results = await searchWiki(db, query, project.name, {
+              ...searchOptions,
+              searchConfig: project.config.search,
+            });
           } finally {
             closeDb(db);
           }

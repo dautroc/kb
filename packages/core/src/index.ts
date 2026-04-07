@@ -23,7 +23,7 @@ export { parsePage } from "./markdown.js";
 export type { ParsedPage, CrossLink } from "./markdown.js";
 
 export { indexProject } from "./indexer.js";
-export type { IndexStats } from "./indexer.js";
+export type { IndexStats, EmbedSummary } from "./indexer.js";
 
 export { searchWiki, searchAcrossProjects } from "./search.js";
 export type {
@@ -51,6 +51,12 @@ export type { LintIssue, LintResult, LintSeverity } from "./lint.js";
 
 export { parseLogEntries } from "./log-parser.js";
 export type { ParsedLogEntry } from "./log-parser.js";
+
+export { embedProject, chunkPage, OllamaUnavailableError } from "./embedder.js";
+export type { Chunk, EmbedStats } from "./embedder.js";
+
+export { vectorSearchWiki, mergeRrf } from "./vector-search.js";
+export type { VectorSearchResult, SearchConfig } from "./vector-search.js";
 
 export { resolveDependencies, updateGitDep } from "./deps.js";
 

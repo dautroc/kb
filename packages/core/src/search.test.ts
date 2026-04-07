@@ -60,7 +60,7 @@ describe("searchWiki", () => {
 
     const db = openDb(project);
     try {
-      const results = searchWiki(db, "", project.name);
+      const results = await searchWiki(db, "", project.name);
       expect(results).toHaveLength(0);
     } finally {
       closeDb(db);
@@ -82,7 +82,7 @@ describe("searchWiki", () => {
 
     const db = openDb(project);
     try {
-      const results = searchWiki(db, "authenticate JWT", project.name);
+      const results = await searchWiki(db, "authenticate JWT", project.name);
       expect(results.length).toBeGreaterThan(0);
       expect(results[0].path).toBe("wiki/auth.md");
       expect(results[0].rank).toBeLessThan(0); // BM25 score is negative
@@ -106,7 +106,7 @@ describe("searchWiki", () => {
 
     const db = openDb(project);
     try {
-      const results = searchWiki(db, "JWT Tokens", project.name);
+      const results = await searchWiki(db, "JWT Tokens", project.name);
       expect(results.length).toBeGreaterThan(0);
       expect(results[0].title).toBe("JWT Tokens");
     } finally {
@@ -126,9 +126,14 @@ describe("searchWiki", () => {
 
     const db = openDb(project);
     try {
-      const results = searchWiki(db, "authentication tokens", project.name, {
-        limit: 3,
-      });
+      const results = await searchWiki(
+        db,
+        "authentication tokens",
+        project.name,
+        {
+          limit: 3,
+        },
+      );
       expect(results.length).toBeLessThanOrEqual(3);
     } finally {
       closeDb(db);
@@ -155,7 +160,7 @@ describe("searchWiki", () => {
 
     const db = openDb(project);
     try {
-      const results = searchWiki(db, "authentication", project.name, {
+      const results = await searchWiki(db, "authentication", project.name, {
         tags: ["security", "api"],
       });
       expect(results.length).toBe(1);
@@ -188,10 +193,14 @@ describe("searchWiki", () => {
         "other-project",
       );
 
-      const results = searchWiki(db, "authentication", project.name);
+      const results = await searchWiki(db, "authentication", project.name);
       expect(results.every((r) => r.path !== "other/page.md")).toBe(true);
 
-      const otherResults = searchWiki(db, "authentication", "other-project");
+      const otherResults = await searchWiki(
+        db,
+        "authentication",
+        "other-project",
+      );
       expect(otherResults.some((r) => r.path === "other/page.md")).toBe(true);
     } finally {
       closeDb(db);
@@ -208,7 +217,7 @@ describe("searchWiki", () => {
 
     const db = openDb(project);
     try {
-      const results = searchWiki(db, "multiple tags", project.name);
+      const results = await searchWiki(db, "multiple tags", project.name);
       expect(results.length).toBeGreaterThan(0);
       expect(results[0].tags).toEqual(["alpha", "beta", "gamma"]);
     } finally {
@@ -238,7 +247,7 @@ describe("searchAcrossProjects", () => {
     return db;
   }
 
-  it("merges results from multiple DBs and prefixes dep paths", () => {
+  it("merges results from multiple DBs and prefixes dep paths", async () => {
     const db1 = makeInMemoryDb("proj-a", [
       {
         path: "wiki/foo.md",
@@ -254,7 +263,7 @@ describe("searchAcrossProjects", () => {
       },
     ]);
 
-    const results = searchAcrossProjects(
+    const results = await searchAcrossProjects(
       [
         { db: db1, projectName: "proj-a", prefix: undefined },
         { db: db2, projectName: "proj-b", prefix: "proj-b" },
@@ -272,12 +281,12 @@ describe("searchAcrossProjects", () => {
     expect(proj2Result!.path).toBe("proj-b: wiki/bar.md");
   });
 
-  it("returns results from current project with no prefix", () => {
+  it("returns results from current project with no prefix", async () => {
     const db = makeInMemoryDb("main", [
       { path: "wiki/main.md", title: "Main Page", content: "authentication" },
     ]);
 
-    const results = searchAcrossProjects(
+    const results = await searchAcrossProjects(
       [{ db, projectName: "main", prefix: undefined }],
       "authentication",
       { limit: 5 },
@@ -286,5 +295,36 @@ describe("searchAcrossProjects", () => {
 
     expect(results[0]!.project).toBeUndefined();
     expect(results[0]!.path).toBe("wiki/main.md");
+  });
+});
+
+describe("searchWiki — hybrid mode", () => {
+  let tmpDir: string;
+  let project: Project;
+
+  beforeEach(async () => {
+    tmpDir = await mkdtemp(join(tmpdir(), "kb-search-hybrid-test-"));
+    project = await setupProject(tmpDir);
+  });
+
+  afterEach(async () => {
+    await rm(tmpDir, { recursive: true, force: true });
+  });
+
+  it("returns searchMode bm25 when chunks_vec is empty", async () => {
+    await writeFile(
+      join(project.wikiDir, "auth.md"),
+      `---\ntitle: Auth\n---\n\nAuthentication flow.\n`,
+      "utf8",
+    );
+    await indexProject(project);
+
+    const db = openDb(project);
+    try {
+      const results = await searchWiki(db, "authentication", project.name);
+      expect(results[0]?.searchMode).toBe("bm25");
+    } finally {
+      closeDb(db);
+    }
   });
 });

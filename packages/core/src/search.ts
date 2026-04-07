@@ -1,4 +1,6 @@
 import Database from "better-sqlite3";
+import type { SearchConfig, VectorSearchResult } from "./vector-search.js";
+import { vectorSearchWiki, mergeRrf } from "./vector-search.js";
 
 export interface SearchResult {
   rank: number;
@@ -7,11 +9,13 @@ export interface SearchResult {
   snippet: string;
   tags: string[];
   project?: string;
+  searchMode?: "bm25" | "hybrid";
 }
 
 export interface SearchOptions {
   limit?: number;
   tags?: string[];
+  searchConfig?: SearchConfig;
 }
 
 interface FtsRow {
@@ -42,12 +46,12 @@ function parseTags(raw: string): string[] {
     .filter((t) => t.length > 0);
 }
 
-export function searchWiki(
+export async function searchWiki(
   db: Database.Database,
   query: string,
   projectName: string,
   options?: SearchOptions,
-): SearchResult[] {
+): Promise<SearchResult[]> {
   if (!query || query.trim() === "") {
     return [];
   }
@@ -77,7 +81,7 @@ export function searchWiki(
 
   const rows = stmt.all(ftsQuery, projectName, ...tagParams, limit);
 
-  const results: SearchResult[] = rows.map((row) => ({
+  const bm25Results: SearchResult[] = rows.map((row) => ({
     rank: row.rank,
     path: row.path,
     title: row.title,
@@ -85,7 +89,35 @@ export function searchWiki(
     tags: parseTags(row.tags),
   }));
 
-  return results;
+  // Transparency check: hybrid only if embeddings exist AND config provided
+  let hasEmbeddings = false;
+  try {
+    hasEmbeddings =
+      ((
+        db.prepare("SELECT count(*) as n FROM chunks_vec").get() as {
+          n: number;
+        }
+      ).n ?? 0) > 0;
+  } catch {
+    hasEmbeddings = false;
+  }
+
+  if (!hasEmbeddings || !options?.searchConfig) {
+    return bm25Results.map((r) => ({ ...r, searchMode: "bm25" as const }));
+  }
+
+  // Vector search (returns [] on Ollama unavailability)
+  const vecResults: VectorSearchResult[] = await vectorSearchWiki(
+    db,
+    query,
+    options.searchConfig,
+    20,
+  );
+  if (vecResults.length === 0) {
+    return bm25Results.map((r) => ({ ...r, searchMode: "bm25" as const }));
+  }
+
+  return mergeRrf(bm25Results, vecResults, limit);
 }
 
 export interface CrossProjectTarget {
@@ -94,16 +126,16 @@ export interface CrossProjectTarget {
   prefix?: string;
 }
 
-export function searchAcrossProjects(
+export async function searchAcrossProjects(
   targets: CrossProjectTarget[],
   query: string,
   options?: SearchOptions,
-): SearchResult[] {
+): Promise<SearchResult[]> {
   const limit = options?.limit ?? 10;
   const allResults: SearchResult[] = [];
 
   for (const { db, projectName, prefix } of targets) {
-    const results = searchWiki(db, query, projectName, {
+    const results = await searchWiki(db, query, projectName, {
       ...options,
       limit: limit * 2,
     });

@@ -92,6 +92,47 @@ describe("openDb", () => {
   });
 });
 
+describe("sqlite-vec integration", () => {
+  let tmpDir: string;
+  let project: Project;
+
+  beforeEach(async () => {
+    tmpDir = await mkdtemp(join(tmpdir(), "kb-db-vec-test-"));
+    await mkdir(join(tmpDir, ".kb"), { recursive: true });
+    project = makeProject(tmpDir);
+  });
+
+  afterEach(async () => {
+    await rm(tmpDir, { recursive: true, force: true });
+  });
+
+  it("chunks table is created by openDb()", () => {
+    const db = openDb(project);
+    try {
+      const tables = db
+        .prepare("SELECT name FROM sqlite_master WHERE type='table'")
+        .all()
+        .map((r: any) => r.name);
+      expect(tables).toContain("chunks");
+    } finally {
+      closeDb(db);
+    }
+  });
+
+  it("chunks_vec virtual table is created by openDb()", () => {
+    const db = openDb(project);
+    try {
+      const vtables = db
+        .prepare("SELECT name FROM sqlite_master WHERE type='table'")
+        .all()
+        .map((r: any) => r.name);
+      expect(vtables).toContain("chunks_vec");
+    } finally {
+      closeDb(db);
+    }
+  });
+});
+
 describe("closeDb", () => {
   it("closes the database connection", async () => {
     const tmpDir2 = await mkdtemp(join(tmpdir(), "kb-db-close-"));
