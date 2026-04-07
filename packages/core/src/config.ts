@@ -23,7 +23,7 @@ export interface KbConfig {
     provider: "anthropic" | "openai" | "ollama" | "zai";
     model: string;
   };
-  search: SearchConfig;
+  search?: SearchConfig;
   dependencies: Record<
     string,
     { path?: string; git?: string; branch?: string; mode?: string }

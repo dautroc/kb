@@ -392,9 +392,9 @@ chunk_size = 500
 `.trim(),
     );
     const config = await parseConfig(configPath);
-    expect(config.search.embedding_model).toBe("mxbai-embed-large");
-    expect(config.search.ollama_url).toBe("http://remote:11434");
-    expect(config.search.chunk_size).toBe(500);
+    expect(config.search?.embedding_model).toBe("mxbai-embed-large");
+    expect(config.search?.ollama_url).toBe("http://remote:11434");
+    expect(config.search?.chunk_size).toBe(500);
   });
 });
 
