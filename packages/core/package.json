@@ -22,7 +22,8 @@
     "pdf-parse": "^1.1.4",
     "remark": "^15.0.0",
     "remark-frontmatter": "^5.0.0",
-    "remark-wiki-link": "^2.0.0"
+    "remark-wiki-link": "^2.0.0",
+    "sqlite-vec": "^0.1.9"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
