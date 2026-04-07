@@ -20,7 +20,7 @@ export function mergeRrf(
   bm25Results: SearchResult[],
   vecResults: VectorSearchResult[],
   limit: number,
-): (SearchResult & { searchMode: "hybrid" })[] {
+): SearchResult[] {
   if (bm25Results.length === 0 && vecResults.length === 0) return [];
 
   const allPaths = new Set([
@@ -53,9 +53,7 @@ export function mergeRrf(
 
   return scored
     .slice(0, limit)
-    .map(({ _score: _s, ...r }) => r) as (SearchResult & {
-    searchMode: "hybrid";
-  })[];
+    .map(({ _score: _s, ...r }) => r as SearchResult);
 }
 
 async function embedQuery(
