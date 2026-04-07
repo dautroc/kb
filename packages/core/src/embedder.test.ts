@@ -169,9 +169,10 @@ describe("embedProject", () => {
       `---\ntitle: Auth Guide\n---\n\n${"Authentication token flow. ".repeat(10)}\n`,
       "utf8",
     );
+    // indexProject now calls embedProject internally; rebuild=true to verify direct call
     await indexProject(project);
 
-    const stats = await embedProject(project);
+    const stats = await embedProject(project, { rebuild: true });
     expect(stats.embedded).toBe(1);
     expect(stats.skipped).toBe(0);
     expect(stats.errors).toBe(0);
@@ -233,7 +234,8 @@ describe("embedProject", () => {
         },
       },
     };
-    await expect(embedProject(badProject)).rejects.toThrow(
+    // indexProject already embedded the page; use rebuild=true to force re-embed attempt
+    await expect(embedProject(badProject, { rebuild: true })).rejects.toThrow(
       OllamaUnavailableError,
     );
   });
