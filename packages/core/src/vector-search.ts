@@ -2,7 +2,10 @@ import Database from "better-sqlite3";
 import type { SearchResult } from "./search.js";
 import { OllamaUnavailableError } from "./embedder.js";
 
+// SearchConfig is the runtime search configuration subset.
+// KbConfig.search (in config.ts) is a superset that also includes embedding_provider.
 export interface SearchConfig {
+  embedding_provider?: "ollama";
   embedding_model: string;
   ollama_url: string;
   chunk_size: number;

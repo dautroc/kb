@@ -56,7 +56,11 @@ async function toolSearch(
   const db = openDb(project);
   let results;
   try {
-    results = await searchWiki(db, query, project.name, { limit, tags });
+    results = await searchWiki(db, query, project.name, {
+      limit,
+      tags,
+      searchConfig: project.config.search,
+    });
   } finally {
     closeDb(db);
   }
