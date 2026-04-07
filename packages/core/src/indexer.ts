@@ -5,12 +5,21 @@ import Database from "better-sqlite3";
 import type { Project } from "./project.js";
 import { parsePage } from "./markdown.js";
 import { openDb, closeDb } from "./db.js";
+import { embedProject, OllamaUnavailableError } from "./embedder.js";
+
+export interface EmbedSummary {
+  embedded: number;
+  skipped: number;
+  errors: number;
+  ollamaUnavailable?: boolean;
+}
 
 export interface IndexStats {
   indexed: number;
   skipped: number;
   deleted: number;
   errors: number;
+  embedStats?: EmbedSummary;
 }
 
 async function collectMdFiles(dir: string): Promise<string[]> {
@@ -184,6 +193,27 @@ export async function indexProject(
 
     deleteStale(stalePaths);
     stats.deleted += stalePaths.length;
+
+    // Embed pages after BM25 indexing (skip stale deletion phase)
+    try {
+      const es = await embedProject(project, { rebuild });
+      stats.embedStats = {
+        embedded: es.embedded,
+        skipped: es.skipped,
+        errors: es.errors,
+      };
+    } catch (err) {
+      if (err instanceof OllamaUnavailableError) {
+        stats.embedStats = {
+          embedded: 0,
+          skipped: 0,
+          errors: 0,
+          ollamaUnavailable: true,
+        };
+      } else {
+        throw err;
+      }
+    }
 
     return stats;
   } finally {

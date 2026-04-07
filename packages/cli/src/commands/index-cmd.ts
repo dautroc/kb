@@ -30,6 +30,21 @@ export function makeIndexCommand(): Command {
           `${chalk.green("✓")} Indexed ${total} page${total !== 1 ? "s" : ""}${detailStr}`,
         );
 
+        if (stats.embedStats) {
+          const es = stats.embedStats;
+          if (es.ollamaUnavailable) {
+            console.warn(
+              chalk.yellow("⚠  Ollama not reachable — skipping embeddings"),
+            );
+          } else {
+            console.log(
+              chalk.green(
+                `✓ Embedded ${es.embedded} page(s) (${es.skipped} skipped)`,
+              ),
+            );
+          }
+        }
+
         if (stats.errors > 0) {
           process.exit(1);
         }
